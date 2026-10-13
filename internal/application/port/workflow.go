@@ -30,7 +30,15 @@ type Snapshot struct {
 	Branch     string `json:"branch"`
 	DirtyFiles int    `json:"dirty_files"`
 }
+
+// WorkflowFacts batches policy inputs for all live issues in one project.
+type WorkflowFacts struct {
+	History        map[string][]domain.IssueSessionHistory
+	ActiveReviews  map[string]*Review
+	LatestHandoffs map[string]*Activity
+}
 type WorkflowReader interface {
+	Facts(context.Context, string) (WorkflowFacts, error)
 	History(context.Context, string, string) ([]domain.IssueSessionHistory, error)
 	ActiveReview(context.Context, string, string) (*Review, error)
 	LatestHandoff(context.Context, string, string) (*Activity, error)

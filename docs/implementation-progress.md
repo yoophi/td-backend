@@ -203,3 +203,11 @@ QueryReader에 with_deleted 선택을 추가하여 archive 조회에서도 삭�
 HTTP 검증: auto fallback/forced text/invalid TDQ, TDQ sort와 명시적 정렬 우선순위, 기존 필터와 교집합, full DTO, 페이지 total/token, closed 기본 제외와 명시적 선택, with_deleted와 이전 댓글 조건을 확인했습니다. 별도 SQLite writer가 project token 조회 이후 Issue와 change_seq를 변경하도록 주입했을 때 records/total/token은 모두 이전 snapshot을 유지하고 다음 요청만 새 snapshot을 보는 것을 검증했습니다. monitor projection과 available_transitions/presence 연계는 gh-11의 남은 범위입니다.
 
 목록 검색 변경 후 검증: `go test -race ./...`, `go vet ./...`, OpenAPI/GUI 계약 검사와 `git diff --check` 통과했습니다.
+
+### gh-11 — Monitor용 batch policy facts
+
+WorkflowReader.Facts를 추가하여 live Issue의 참여 이력, active review basis, 최신 handoff를 세 개의 project-scoped query로 읽습니다. 최신 handoff는 Issue별 window rank로 선택하며 review freshness는 기존 application policy에 맡깁니다. 기존 snapshot/transaction과 scope 수명 제한을 그대로 사용합니다.
+
+실제 workflow로 생성한 이력·handoff·record-only 승인에 대해 batch 결과와 기존 단건 reader 결과가 같은지 확인했습니다. 내용 수정에 따른 승인 무효화, soft-delete 후 facts 제외, 다른 project 격리와 callback 밖 접근 거부도 검증했습니다. 이 reader를 monitor 분류와 available_transitions에 연결하는 작업은 계속 진행합니다.
+
+Batch policy facts 추가 후 전체 `go test -race ./...`, `go vet ./...`, `git diff --check` 통과.
