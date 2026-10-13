@@ -3,6 +3,7 @@ package receiptcodec
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/yoophi/td-backend/internal/application/board"
 	"github.com/yoophi/td-backend/internal/application/issue"
 	"github.com/yoophi/td-backend/internal/application/port"
 	"github.com/yoophi/td-backend/internal/application/workflow"
@@ -16,6 +17,32 @@ func (Codec) Encode(kind string, outcome any) (port.StoredReply, error) {
 	headers := map[string]string{"Content-Type": "application/json"}
 	switch kind {
 	case "project.create", "session.create":
+	case "board.create", "board.update", "board.delete", "board.visit", "board.position", "board.unpin":
+		result, ok := outcome.(board.Result)
+		if !ok {
+			return port.StoredReply{}, fmt.Errorf("invalid board outcome")
+		}
+		headers["ETag"] = `"` + domain.Revision(result.Board.Revision) + `"`
+		if kind != "board.create" {
+			status = 200
+		}
+		outcome = struct {
+			Board BoardDTO `json:"board"`
+		}{BoardDTOFrom(result.Board)}
+		switch kind {
+		case "board.delete":
+			outcome = struct {
+				Deleted bool `json:"deleted"`
+			}{true}
+		case "board.position":
+			outcome = struct {
+				Positioned bool `json:"positioned"`
+			}{true}
+		case "board.unpin":
+			outcome = struct {
+				Removed bool `json:"removed"`
+			}{true}
+		}
 	case "issue.create", "issue.update", "issue.delete", "issue.restore", "relation.remove", "relation.files":
 		result, ok := outcome.(issue.Result)
 		if !ok {

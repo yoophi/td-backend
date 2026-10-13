@@ -20,6 +20,7 @@ import (
 	"github.com/yoophi/td-backend/internal/adapter/identity"
 	"github.com/yoophi/td-backend/internal/adapter/sqlite"
 	"github.com/yoophi/td-backend/internal/adapter/tokenauth"
+	"github.com/yoophi/td-backend/internal/application/board"
 	"github.com/yoophi/td-backend/internal/application/issue"
 	"github.com/yoophi/td-backend/internal/application/operation"
 	"github.com/yoophi/td-backend/internal/application/port"
@@ -54,7 +55,13 @@ func newHarness(t *testing.T) *harness {
 	ids := identity.New()
 	svc := &project.Service{Writes: store, Reads: store, Encoder: receiptcodec.Codec{}, ID: ids.ID, Now: time.Now}
 	h := &harness{t: t, store: store, projects: svc, auth: auth, path: path}
-	h.server = httptest.NewServer(New(Options{Projects: svc, Auth: auth, Workflows: &workflow.Service{Reads: store, ID: ids.ID, Runner: operation.Runner{Writes: store, Encoder: receiptcodec.Codec{}, ID: ids.ID, Now: time.Now}}, Issues: &issue.Service{Reads: store, ID: ids.ID, Runner: operation.Runner{Writes: store, Encoder: receiptcodec.Codec{}, ID: ids.ID, Now: time.Now}}}))
+	runner := operation.Runner{Writes: store, Encoder: receiptcodec.Codec{}, ID: ids.ID, Now: time.Now}
+	h.server = httptest.NewServer(New(Options{
+		Projects: svc, Auth: auth,
+		Boards:    &board.Service{Reads: store, ID: ids.ID, Runner: runner},
+		Workflows: &workflow.Service{Reads: store, ID: ids.ID, Runner: runner},
+		Issues:    &issue.Service{Reads: store, ID: ids.ID, Runner: runner},
+	}))
 	t.Cleanup(func() { h.server.Close(); h.store.Close() })
 	return h
 }

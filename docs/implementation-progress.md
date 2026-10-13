@@ -125,3 +125,15 @@ HTTP+SQLite 검증: 댓글 replay, 댓글·로그의 승인 유지, soft-delete 
 Board에 revision/deleted_at을 추가하고 snapshot reader와 scoped writer ports를 구현했습니다. SQLite adapter는 project별 목록/상세·archive 조회, observed revision 저장, soft-delete 후 이름 재사용, 카드 위치 읽기와 원자적 교체를 지원합니다. 위치를 같은 writer transaction에서 삭제 후 삽입하므로 기존 카드가 sparse key를 교환할 때 중간 UNIQUE 충돌을 피합니다.
 
 검증: 실제 SQLite에서 key 교환, stale revision, project 격리, 잘못된 다른 project의 Issue 연결과 중복 위치의 rollback, 카드 clear, archive/이름 재사용, callback 외부 scope 접근 거부를 확인했습니다. `go test -race ./...`, `go vet ./...`, `git diff --check` 통과. Board application/HTTP CRUD·builtin 보호, TDQ 후보 평가, slot/move 알고리즘과 endpoint 통합은 gh-9의 남은 범위입니다.
+
+### gh-9 — Board 정의·설정·pin/unpin API
+
+Board 목록/생성/수정/삭제/visit 및 명시적 position 추가·해제 HTTP endpoint를 application service와 연결했습니다. 모든 mutation은 소유 Session/project 권한, observed Board revision, 멱등 receipt와 같은 transaction의 aggregate effect를 사용합니다. Board effect version 1은 정의와 전체 위치 목록을 before/after로 보존하므로 gh-12 Undo의 입력으로 사용할 수 있습니다.
+
+이름은 trim 후 빈 값을 거부하며 TDQ를 parse/validate합니다. 빈 query는 전체 선택을 뜻하고 생성 시 query 필드 자체는 필수입니다. builtin 보드의 name/query 변경과 삭제는 403이며 view mode·visit·position은 변경 가능합니다. DTO는 nullable last_viewed_at과 revision 문자열을 명시적으로 반환합니다. 삭제는 soft-delete이며 이후 이름 재사용이 가능합니다.
+
+Position 입력은 기존 위치에서 이동 카드를 제외한 뒤의 1-based insertion slot입니다. 저장은 sparse key이고 간격 소진 및 정수 overflow/underflow 때 재배치합니다. 중간점 계산은 덧셈 overflow를 피합니다. 명시적 positions와 query 기반 visible order의 구분을 유지하며 before_id 이동은 후속 단계에서 구현합니다.
+
+검증: HTTP+SQLite에서 builtin 제한, 유효하지 않은 TDQ/날짜/query 누락, 생성·visit·삭제·pin의 정확한 receipt replay, missing/stale revision, receipt 실패 시 Board revision/positions rollback 및 동일 key 복구, project 간 card/Board/Session 격리를 확인했습니다. versioned effect의 이전/이후 Board revision과 positions도 확인했습니다. 순서 테스트는 top/middle/end/reposition, gap exhaustion 및 정수 양 극단을 포함합니다. 전체 `go test -race ./...`, `go vet ./...`, OpenAPI/GUI 계약 검사와 `git diff --check` 통과. service 조립 정리 후 cmd/HTTP 테스트도 통과했습니다.
+
+남은 gh-9 범위: TDQ 후보 평가와 Board detail 카드 projection, before_id move 및 해당 HTTP 회귀 테스트. capability는 아직 완성된 Board 기능으로 광고하지 않습니다.

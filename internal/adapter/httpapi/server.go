@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/yoophi/td-backend/internal/application/board"
 	"io"
 	"net/http"
 	"reflect"
@@ -19,6 +20,7 @@ import (
 )
 
 type Options struct {
+	Boards    *board.Service
 	Workflows *workflow.Service
 	Issues    *issue.Service
 	Projects  *project.Service
@@ -128,6 +130,9 @@ func New(options ...Options) http.Handler {
 	}))
 	if opts.Workflows != nil {
 		registerWorkflow(mux, opts.Workflows, protect, caller)
+	}
+	if opts.Boards != nil {
+		registerBoards(mux, opts.Boards, protect, caller)
 	}
 	if opts.Issues != nil {
 		registerIssueMutations(mux, opts.Issues, protect, caller)
