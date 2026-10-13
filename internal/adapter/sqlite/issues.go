@@ -216,3 +216,38 @@ func (r issueRepo) RecordCreation(ctx context.Context, project, issue, session, 
 	_, e := r.tx.ExecContext(ctx, `INSERT INTO issue_session_history(project_id,id,issue_id,session_id,action,operation_row_id,created_at) VALUES(?,?,?,?,'created',?,?)`, project, operation+":created:"+issue, issue, session, operation, now.UTC().Format(time.RFC3339Nano))
 	return classify(e)
 }
+
+func (r issueRepo) RemoveDependency(ctx context.Context, project, issue, id string) error {
+	if e := r.check(); e != nil {
+		return e
+	}
+	result, e := r.tx.ExecContext(ctx, `DELETE FROM issue_dependencies WHERE project_id=? AND issue_id=? AND id=?`, project, issue, id)
+	if e != nil {
+		return classify(e)
+	}
+	n, e := result.RowsAffected()
+	if e != nil {
+		return e
+	}
+	if n != 1 {
+		return domain.ErrNotFound
+	}
+	return nil
+}
+func (r issueRepo) ReplaceFiles(ctx context.Context, project, issue string, files []domain.IssueFile) error {
+	if e := r.check(); e != nil {
+		return e
+	}
+	if _, e := r.tx.ExecContext(ctx, `DELETE FROM issue_files WHERE project_id=? AND issue_id=?`, project, issue); e != nil {
+		return classify(e)
+	}
+	for _, file := range files {
+		if file.IssueID != issue {
+			return domain.ErrConflict
+		}
+		if _, e := r.tx.ExecContext(ctx, `INSERT INTO issue_files(project_id,id,issue_id,file_path,role,linked_sha,linked_at) VALUES(?,?,?,?,?,?,?)`, project, file.ID, issue, file.FilePath, file.Role, file.LinkedSHA, file.LinkedAt.UTC().Format(time.RFC3339Nano)); e != nil {
+			return classify(e)
+		}
+	}
+	return nil
+}

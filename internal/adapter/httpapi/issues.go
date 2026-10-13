@@ -14,6 +14,7 @@ import (
 func registerIssueMutations(mux *http.ServeMux, svc *issue.Service, protect func(http.HandlerFunc) http.HandlerFunc, caller func(*http.Request) domain.Caller) {
 
 	registerIssueList(mux, svc, protect, caller)
+	registerRelations(mux, svc, protect, caller)
 	mux.HandleFunc("GET /v1/projects/{project_id}/issues/{issue_id}", protect(func(w http.ResponseWriter, r *http.Request) {
 		values := r.URL.Query()
 		for k, v := range values {

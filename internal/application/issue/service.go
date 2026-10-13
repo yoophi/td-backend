@@ -26,8 +26,9 @@ type Result struct{ Issue domain.Issue }
 
 // State is the versioned issue aggregate payload persisted for conditional undo.
 type State struct {
-	Issue        domain.Issue      `json:"issue"`
-	Dependencies []port.Dependency `json:"dependencies"`
+	Files        []domain.IssueFile `json:"files"`
+	Issue        domain.Issue       `json:"issue"`
+	Dependencies []port.Dependency  `json:"dependencies"`
 }
 
 func invalid(field, message string) error {
@@ -155,6 +156,19 @@ func (s *Service) Create(ctx context.Context, c domain.Caller, m port.Mutation, 
 	})
 }
 func SaveEffect(command operation.CommandContext, project string, before *State, after State) error {
+	if after.Files == nil || (before != nil && before.Files == nil) {
+		files, e := command.Tx.Issues().Files(command.Tx.Context(), project, after.Issue.ID)
+		if e != nil {
+			return e
+		}
+		if after.Files == nil {
+			after.Files = files
+		}
+		if before != nil && before.Files == nil {
+			before.Files = files
+		}
+	}
+
 	var previous []byte
 	var e error
 	if before != nil {
@@ -167,7 +181,7 @@ func SaveEffect(command operation.CommandContext, project string, before *State,
 	if e != nil {
 		return e
 	}
-	return command.Tx.OperationWrites().SaveEffect(command.Tx.Context(), port.Effect{ProjectID: project, OperationRowID: command.RowID, EntityKind: "issue", EntityID: after.Issue.ID, AfterRevision: domain.Revision(after.Issue.Revision), StateVersion: 1, BeforeJSON: previous, AfterJSON: next})
+	return command.Tx.OperationWrites().SaveEffect(command.Tx.Context(), port.Effect{ProjectID: project, OperationRowID: command.RowID, EntityKind: "issue", EntityID: after.Issue.ID, AfterRevision: domain.Revision(after.Issue.Revision), StateVersion: 2, BeforeJSON: previous, AfterJSON: next})
 }
 func (s *Service) Patch(ctx context.Context, c domain.Caller, m port.Mutation, id, observed string, cmd PatchCommand) (port.StoredReply, error) {
 	return s.mutate(ctx, c, m, id, observed, "issue.update", false, func(command operation.CommandContext, i *domain.Issue) error {

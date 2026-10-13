@@ -83,3 +83,11 @@ HTTP+SQLite에서 무기명 구현자 승인 거부, 잘못된 self-review/attri
 기존 td를 확인하여 review/close 부모 cascade는 epic에만 적용하도록 정정했습니다. 삭제된 부모는 cascade 대상에서 제외하며, review 부모 cascade에도 activity log를 기록합니다.
 
 검증: 실제 HTTP+SQLite에서 2단계 부모 종료와 dependent 해제, 미해결 prerequisite이 있는 dependent 유지, non-epic 부모 유지, 단일 operation의 aggregate effect 4개, byte-exact replay를 확인했습니다. dependent UPDATE 실패를 주입했을 때 자식·부모·상위 epic 종료가 모두 rollback되며 같은 key 재시도가 성공합니다. 전체 race suite 및 변경 후 cascade regression, `go vet ./...` 통과. gh-8의 나머지 관계·활동·review/status API와 epic 승인 시 descendant cascade 검증은 계속 진행합니다.
+
+### gh-8 — 의존 관계와 파일 연결
+
+POST/DELETE dependencies와 PUT files를 구현했습니다. 의존 관계 추가는 같은 project의 살아 있는 target을 확인하고 반복 탐색으로 self edge와 cycle을 거부합니다. 삭제는 project·source Issue·dep_id를 모두 확인합니다. 파일은 metadata만 저장하며 path/role 검증과 중복 거부, 빈 배열로 전체 clear를 지원합니다.
+
+관계 변경은 revision/content version 증가·review supersession·관계 persistence·operation effect/receipt를 같은 transaction에서 처리합니다. Aggregate snapshot version 2는 files를 포함하며 이전/이후 연결을 보존합니다. 일반 Issue/workflow 변경도 파일 목록을 유지하는 snapshot을 기록하고, 전용 Files reader로 전체 Issue context를 불필요하게 읽지 않습니다. Undo 구현 gh-12는 기존 version 1과 version 2를 모두 해석해야 합니다.
+
+검증: 실제 HTTP+SQLite에서 3-node cycle/self edge, 잘못된 source에서 삭제, project 간 연결 거부, file role/path/duplicate validation, 승인 무효화, 파일 INSERT 실패의 이전 연결/revision 보존과 같은 key 재시도, snapshot before/after files를 확인했습니다. `go test -race ./...`, `go vet ./...` 통과. gh-8의 활동·review/status endpoints와 나머지 cascade/parity 검증은 계속 진행합니다.

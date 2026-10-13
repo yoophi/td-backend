@@ -49,26 +49,7 @@ func (r issueRepo) Context(ctx context.Context, project, id string, reviews bool
 	if e != nil {
 		return result, e
 	}
-	rows, e = r.tx.QueryContext(ctx, `SELECT id,issue_id,file_path,role,linked_sha,linked_at FROM issue_files WHERE project_id=? AND issue_id=? ORDER BY file_path,role,id`, project, id)
-	if e != nil {
-		return result, classify(e)
-	}
-	for rows.Next() {
-		var f domain.IssueFile
-		var stamp string
-		if e = rows.Scan(&f.ID, &f.IssueID, &f.FilePath, &f.Role, &f.LinkedSHA, &stamp); e != nil {
-			rows.Close()
-			return result, e
-		}
-		f.LinkedAt, e = time.Parse(time.RFC3339Nano, stamp)
-		if e != nil {
-			rows.Close()
-			return result, e
-		}
-		result.Files = append(result.Files, f)
-	}
-	e = rows.Err()
-	rows.Close()
+	result.Files, e = r.Files(ctx, project, id)
 	if e != nil {
 		return result, e
 	}
@@ -142,4 +123,29 @@ func (r issueRepo) readReviews(ctx context.Context, project, id string, result *
 		result.Reviews = append(result.Reviews, review)
 	}
 	return rows.Err()
+}
+
+func (r issueRepo) Files(ctx context.Context, project, id string) ([]domain.IssueFile, error) {
+	if e := r.check(); e != nil {
+		return nil, e
+	}
+	rows, e := r.tx.QueryContext(ctx, `SELECT id,issue_id,file_path,role,linked_sha,linked_at FROM issue_files WHERE project_id=? AND issue_id=? ORDER BY file_path,role,id`, project, id)
+	if e != nil {
+		return nil, classify(e)
+	}
+	defer rows.Close()
+	result := []domain.IssueFile{}
+	for rows.Next() {
+		var f domain.IssueFile
+		var stamp string
+		if e = rows.Scan(&f.ID, &f.IssueID, &f.FilePath, &f.Role, &f.LinkedSHA, &stamp); e != nil {
+			return nil, e
+		}
+		f.LinkedAt, e = time.Parse(time.RFC3339Nano, stamp)
+		if e != nil {
+			return nil, e
+		}
+		result = append(result, f)
+	}
+	return result, rows.Err()
 }

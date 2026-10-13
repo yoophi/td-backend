@@ -16,7 +16,7 @@ func (Codec) Encode(kind string, outcome any) (port.StoredReply, error) {
 	headers := map[string]string{"Content-Type": "application/json"}
 	switch kind {
 	case "project.create", "session.create":
-	case "issue.create", "issue.update", "issue.delete", "issue.restore":
+	case "issue.create", "issue.update", "issue.delete", "issue.restore", "relation.remove", "relation.files":
 		result, ok := outcome.(issue.Result)
 		if !ok {
 			return port.StoredReply{}, fmt.Errorf("invalid issue outcome")
@@ -28,12 +28,26 @@ func (Codec) Encode(kind string, outcome any) (port.StoredReply, error) {
 		outcome = struct {
 			Issue IssueDTO `json:"issue"`
 		}{IssueDTOFrom(result.Issue)}
+		if kind == "relation.remove" {
+			outcome = struct {
+				Removed bool `json:"removed"`
+			}{true}
+		}
 		if kind == "issue.delete" {
 			outcome = struct {
 				Deleted bool `json:"deleted"`
 			}{true}
 		}
 
+	case "relation.add":
+		result, ok := outcome.(issue.DependencyResult)
+		if !ok {
+			return port.StoredReply{}, fmt.Errorf("invalid dependency outcome")
+		}
+		headers["ETag"] = `"` + domain.Revision(result.Issue.Revision) + `"`
+		outcome = struct {
+			Dependency DependencyDTO `json:"dependency"`
+		}{dependenciesDTO([]port.Dependency{result.Dependency})[0]}
 	case "workflow.transition":
 		result, ok := outcome.(workflow.TransitionResult)
 		if !ok {

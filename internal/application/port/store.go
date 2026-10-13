@@ -49,11 +49,14 @@ type IssueReader interface {
 	All(context.Context, string, bool) ([]domain.Issue, error)
 	Dependencies(context.Context, string, string) ([]Dependency, error)
 	Context(context.Context, string, string, bool) (IssueContext, error)
+	Files(context.Context, string, string) ([]domain.IssueFile, error)
 }
 type IssueWriter interface {
 	// expected=0 creates a record; otherwise atomically checks expected revision.
 	Save(context.Context, string, domain.Issue, int64) error
 	AddDependency(context.Context, string, Dependency) error
+	RemoveDependency(context.Context, string, string, string) error
+	ReplaceFiles(context.Context, string, string, []domain.IssueFile) error
 	SupersedeReviews(context.Context, string, string, time.Time) error
 	RecordCreation(context.Context, string, string, string, string, time.Time) error
 }
