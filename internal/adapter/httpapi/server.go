@@ -14,13 +14,15 @@ import (
 	"github.com/yoophi/td-backend/internal/application/issue"
 	"github.com/yoophi/td-backend/internal/application/port"
 	"github.com/yoophi/td-backend/internal/application/project"
+	"github.com/yoophi/td-backend/internal/application/workflow"
 	"github.com/yoophi/td-backend/internal/domain"
 )
 
 type Options struct {
-	Issues   *issue.Service
-	Projects *project.Service
-	Auth     port.Authenticator
+	Workflows *workflow.Service
+	Issues    *issue.Service
+	Projects  *project.Service
+	Auth      port.Authenticator
 }
 type actorContextKey struct{}
 
@@ -124,6 +126,9 @@ func New(options ...Options) http.Handler {
 			Current  string           `json:"current_session_id"`
 		}{list, c.SessionID})
 	}))
+	if opts.Workflows != nil {
+		registerWorkflow(mux, opts.Workflows, protect, caller)
+	}
 	if opts.Issues != nil {
 		registerIssueMutations(mux, opts.Issues, protect, caller)
 	}

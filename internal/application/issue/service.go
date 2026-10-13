@@ -148,13 +148,13 @@ func (s *Service) Create(ctx context.Context, c domain.Caller, m port.Mutation, 
 		if e = tx.IssueWrites().RecordCreation(ctx, c.ProjectID, i.ID, c.SessionID, command.RowID, command.Now); e != nil {
 			return nil, e
 		}
-		if e = saveEffect(command, c.ProjectID, nil, State{Issue: i, Dependencies: dependencies}); e != nil {
+		if e = SaveEffect(command, c.ProjectID, nil, State{Issue: i, Dependencies: dependencies}); e != nil {
 			return nil, e
 		}
 		return Result{Issue: i}, nil
 	})
 }
-func saveEffect(command operation.CommandContext, project string, before *State, after State) error {
+func SaveEffect(command operation.CommandContext, project string, before *State, after State) error {
 	var previous []byte
 	var e error
 	if before != nil {
@@ -245,7 +245,7 @@ func (s *Service) mutate(ctx context.Context, c domain.Caller, m port.Mutation, 
 		if e = tx.IssueWrites().Save(ctx, c.ProjectID, *i, expected); e != nil {
 			return nil, e
 		}
-		if e = saveEffect(command, c.ProjectID, &before, State{Issue: *i, Dependencies: deps}); e != nil {
+		if e = SaveEffect(command, c.ProjectID, &before, State{Issue: *i, Dependencies: deps}); e != nil {
 			return nil, e
 		}
 		return Result{Issue: *i}, nil

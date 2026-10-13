@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/yoophi/td-backend/internal/application/issue"
 	"github.com/yoophi/td-backend/internal/application/port"
+	"github.com/yoophi/td-backend/internal/application/workflow"
 	"github.com/yoophi/td-backend/internal/domain"
 )
 
@@ -33,6 +34,39 @@ func (Codec) Encode(kind string, outcome any) (port.StoredReply, error) {
 			}{true}
 		}
 
+	case "workflow.transition":
+		result, ok := outcome.(workflow.TransitionResult)
+		if !ok {
+			return port.StoredReply{}, fmt.Errorf("invalid transition outcome")
+		}
+		status = 200
+		headers["ETag"] = `"` + domain.Revision(result.Issue.Revision) + `"`
+		parents, unblocked := []IssueDTO{}, []IssueDTO{}
+		for _, i := range result.ParentStatusUpdates {
+			parents = append(parents, IssueDTOFrom(i))
+		}
+		for _, i := range result.AutoUnblocked {
+			unblocked = append(unblocked, IssueDTOFrom(i))
+		}
+		outcome = struct {
+			Issue     IssueDTO   `json:"issue"`
+			Noop      bool       `json:"noop"`
+			Parents   []IssueDTO `json:"parent_status_updates"`
+			Unblocked []IssueDTO `json:"auto_unblocked"`
+		}{IssueDTOFrom(result.Issue), result.Noop, parents, unblocked}
+	case "workflow.handoff":
+		result, ok := outcome.(workflow.HandoffResult)
+		if !ok {
+			return port.StoredReply{}, fmt.Errorf("invalid handoff outcome")
+		}
+		headers["ETag"] = `"` + domain.Revision(result.Issue.Revision) + `"`
+		h := result.Handoff
+		handoff := HandoffDTO{h.ID, h.IssueID, h.SessionID, append([]string{}, h.Done...), append([]string{}, h.Remaining...), append([]string{}, h.Decisions...), append([]string{}, h.Uncertain...), h.CreatedAt}
+		outcome = struct {
+			Issue           IssueDTO   `json:"issue"`
+			Handoff         HandoffDTO `json:"handoff"`
+			ReviewRequested bool       `json:"review_requested"`
+		}{IssueDTOFrom(result.Issue), handoff, result.ReviewRequested}
 	default:
 		return port.StoredReply{}, fmt.Errorf("unknown reply kind %q", kind)
 	}

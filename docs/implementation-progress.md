@@ -59,3 +59,11 @@ Issue PATCH의 임시 보수적 review 무효화를 기존 정책의 필드 기�
 Application-owned WorkflowReader/WorkflowWriter ports를 추가하고 SQLite adapter에서 참여 이력, active review와 basis content version/handoff ID, typed activity/handoff/snapshot 저장·조회를 구현했습니다. application에 SQL handle을 노출하지 않습니다. Workflow facts loader는 같은 transaction의 Issue·Project policy·history·review·latest handoff로 reviewer/closer 판단 입력을 구성합니다.
 
 유효한 approval은 decision, 미supersede 상태, 현재 content version, 최신 handoff ID와 해당 content version이 일치할 때만 인정합니다. 실제 SQLite에서 history 기반 구현 참여 판단, trusted acknowledgement와 delegated 거부, 오래된 basis 거부, handoff snapshot round trip, active review 유일성과 receipt FK 실패 시 history rollback을 검증했습니다. `go test -race ./...`, `go vet ./...` 통과. 상태 변경 service/HTTP, review/handoff orchestration, cascade와 relation commands는 계속 gh-8의 미완료 범위입니다.
+
+### gh-8 — 기본 상태 전이와 handoff API
+
+start/unstart/block/unblock/reopen/review와 handoff endpoint를 application workflow service에 연결했습니다. observed revision 확인 후 Issue·참여 history·활동 log·aggregate effect·receipt가 같은 transaction으로 저장됩니다. start는 implementer를 기록하고 unstart는 claim을 해제하되 참여 이력을 보존합니다. blocked 상태 start에는 force가 필요합니다. review에는 현재 content version의 handoff가 필요합니다.
+
+Handoff는 review basis를 갱신하고 기존 승인을 supersede합니다. submit_review 기본 true일 때 in_progress Issue를 in_review로 함께 전환하며, false는 상태를 유지합니다. 모든 살아 있는 자식이 in_review/closed이면 부모를 재귀적으로 in_review로 변경하고 변경된 aggregate effect를 같은 transaction에 저장합니다.
+
+검증: 실제 HTTP+SQLite에서 start/handoff byte-exact replay, start/unstart history, handoff snapshot·빈 배열, passive handoff 후 review, force/invalid snapshot을 확인했습니다. 부모 UPDATE에 실패를 주입하여 자식 변경·handoff·receipt rollback 후 동일 key 재시도가 성공하는 것을 검증했습니다. `go test -race ./...`, `go vet ./...` 통과. approve/close/reject, explicit status, review record-only/close-after-approval, 관계·활동 명령과 close cascade는 gh-8의 남은 범위입니다.
