@@ -1,0 +1,42 @@
+// Package port owns application output interfaces; it has no SQL/HTTP dependency.
+package port
+
+import (
+	"context"
+	"github.com/yoophi/td-backend/internal/domain"
+)
+
+type UnitOfWork interface {
+	Write(context.Context, func(TxScope) error) error
+}
+type ReadStore interface {
+	Snapshot(context.Context, func(ReadSnapshot) error) error
+}
+
+// All repositories in one scope use the same database transaction. A scope may
+// not escape its callback. Callbacks never perform network I/O and are not retried.
+type ReadSnapshot interface {
+	Context() context.Context
+	Projects() ProjectReader
+	Issues() IssueReader
+}
+type TxScope interface {
+	ReadSnapshot
+	ProjectWrites() ProjectWriter
+	IssueWrites() IssueWriter
+}
+type ProjectReader interface {
+	Get(context.Context, string) (*domain.Project, error)
+}
+type ProjectWriter interface {
+	Create(context.Context, domain.Project) error
+	AdvanceChange(context.Context, string) (int64, error)
+}
+type IssueReader interface {
+	Get(context.Context, string, string, bool) (*domain.Issue, error)
+	List(context.Context, string, bool) ([]domain.Issue, error)
+}
+type IssueWriter interface {
+	// expected=0 creates a record; otherwise atomically checks expected revision.
+	Save(context.Context, string, domain.Issue, int64) error
+}

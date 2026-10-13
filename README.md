@@ -2,7 +2,7 @@
 
 `td`의 세 번째 store로 사용할 HTTP backend를 설계하는 프로젝트입니다. **Go · SQLite · hexagonal architecture**를 사용하며 `td CLI`, `td monitor`, `td serve`를 통한 `td-gui` 연결을 대상으로 합니다.
 
-현재는 API 명세·아키텍처·저장 schema와 구현 계획을 제공하는 **설계 단계**입니다. 서버 binary, Go application 코드와 td 원격 store adapter는 아직 구현하지 않았습니다. 아래 명령은 구현 후 제공할 목표 사용법입니다.
+현재 **단계별 구현 중**입니다. Go 서버의 구성·health endpoint와 SQLite 저장 adapter를 구현했으며, 프로젝트/작업 API와 td client 연동을 순서대로 진행합니다. 아래 td 명령은 client adapter 구현 후 제공할 목표 사용법입니다. 완료 범위는 [구현 진행 기록](docs/implementation-progress.md)과 td task 상태를 확인합니다.
 
 ## 목표 사용법
 
@@ -74,6 +74,7 @@ Project ID는 생성 후 불변이며 이름·Git remote·경로에서 파생하
 | [docs/sqlite-schema.sql](docs/sqlite-schema.sql) | 실행 검증 가능한 21개 테이블 DDL 초안; production migration 전 단계 |
 | [docs/id-policy.md](docs/id-policy.md) | Project ID와 init/operation key 생성 규칙 |
 | [docs/implementation-plan.md](docs/implementation-plan.md) | td feature/task, dependencies와 완료 기준 |
+| [docs/implementation-progress.md](docs/implementation-progress.md) | 구현한 범위와 검증 결과 |
 | [docs/store-integration.md](docs/store-integration.md) | td 소스 분석과 CLI/monitor/serve adapter 수정 지점 |
 | [CONTEXT.md](CONTEXT.md) | 도메인 용어 |
 | [docs/adr/0001-single-sqlite-transaction-boundary.md](docs/adr/0001-single-sqlite-transaction-boundary.md) | 단일 SQLite 파일과 transaction 결정 |
@@ -97,7 +98,17 @@ docker run --rm \
 
 ## 명세 재생성 및 검증
 
-Python 3와 개발 의존성으로 검증합니다. 현재 단계에는 Go module이 없어 `go run`이나 `go test` 실행 대상은 없습니다.
+Go 서버는 다음 명령으로 빌드·실행·검증합니다. 기본 DB는 `./data/td-backend.db`, listen은 `127.0.0.1:7000`입니다. 아직 구현하지 않은 API는 사용할 수 없습니다.
+
+```sh
+make build
+make test-race
+make check
+./bin/td-backend --addr 127.0.0.1:7000 --db ./data/td-backend.db
+curl http://127.0.0.1:7000/healthz
+```
+
+OpenAPI 및 DDL 명세는 Python 3와 개발 의존성으로 검증합니다.
 
 ```sh
 python3 -m venv .venv

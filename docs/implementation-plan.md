@@ -1,6 +1,6 @@
 # td 구현 계획
 
-기준 설계는 [backend architecture](backend-architecture.md), [API 명세](../swagger.json), [ID 정책](id-policy.md), [store 연동 분석](store-integration.md)입니다. 이 계획은 현재 td의 **gh-issue store**를 사용하여 `yoophi/td-backend`에 feature/task로 등록합니다. 계획 등록은 구현 완료를 뜻하지 않으며 등록한 작업은 모두 open 상태로 시작합니다.
+기준 설계는 [backend architecture](backend-architecture.md), [API 명세](../swagger.json), [ID 정책](id-policy.md), [store 연동 분석](store-integration.md)입니다. 이 계획은 현재 td의 **gh-issue store**를 사용하여 `yoophi/td-backend`에 feature/task로 등록합니다. 등록 당시에는 모두 open 상태였으며, 현재 상태는 td와 [구현 진행 기록](implementation-progress.md)에서 확인합니다.
 
 ## Feature
 
@@ -110,6 +110,6 @@ td handoff <task-id> --done "완료한 내용" --remaining "남은 내용"
 td review <task-id>
 ```
 
-구현·필요한 검증을 완료한 작업만 review로 제출합니다. approve에는 실제 reviewer 또는 명시적 self-review와 reason을 기록합니다. 구현을 수행하지 않은 Session을 독립 reviewer로 이름만 기재하지 않습니다. 이번 계획 등록 단계에서는 task를 start/approve/close하지 않습니다.
+구현·필요한 검증을 완료한 작업만 review로 제출합니다. approve에는 실제 reviewer 또는 명시적 self-review와 reason을 기록합니다. 구현을 수행하지 않은 Session을 독립 reviewer로 이름만 기재하지 않습니다. 각 완료 task는 별도로 commit/push하고 완료 알림을 보냅니다.
 
 처음부터 capability 전체를 지원한다고 응답하지 않습니다. backend 단계별로 완료된 capability를 공개하고, 최종 통합 task에서 CLI lifecycle, monitor 편집·보드·메모, serve/GUI HTTP·SSE 및 CLI-backed query/status를 함께 검증합니다. import/export·기존 store migration 및 sync 프로토콜은 초기 범위 밖입니다.

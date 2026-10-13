@@ -1,0 +1,4 @@
+internal/domain/models.go contains domain types and validation helpers adapted
+from github.com/yoophi/td (originally github.com/marcus/td), commit
+c64d7873d8f555dd49875e34e6b39ae5257e2e0c, internal/models/models.go.
+The upstream MIT license is preserved in third_party/td/LICENSE.
