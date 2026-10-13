@@ -100,14 +100,21 @@ func ParseIssues(text string) (*Query, error) {
 
 // Filter evaluates the full Boolean expression before sorting. It does not
 // truncate the input scan or silently return a partial board.
+type FilterOptions struct{ IncludeClosed, WithDeleted bool }
+
 func Filter(query string, facts *Facts, ctx EvalContext, includeClosed bool) ([]domain.Issue, error) {
+	return Select(query, facts, ctx, FilterOptions{IncludeClosed: includeClosed})
+}
+
+// Select evaluates the same snapshot while applying the caller's visibility.
+func Select(query string, facts *Facts, ctx EvalContext, opts FilterOptions) ([]domain.Issue, error) {
 	q, e := ParseIssues(query)
 	if e != nil {
 		return nil, e
 	}
 	issues := []domain.Issue{}
 	for _, i := range facts.Issues {
-		if i.DeletedAt == nil && (includeClosed || i.Status != domain.StatusClosed) {
+		if (opts.WithDeleted || i.DeletedAt == nil) && (opts.IncludeClosed || i.Status != domain.StatusClosed) {
 			issues = append(issues, i)
 		}
 	}

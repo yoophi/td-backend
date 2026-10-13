@@ -21,7 +21,7 @@ func (s *Service) Query(ctx context.Context, c domain.Caller, query string) ([]s
 		if _, e := tdq.ParseIssues(query); e != nil {
 			return invalid("q", e.Error())
 		}
-		facts, e := r.Queries().Facts(r.Context(), c.ProjectID)
+		facts, e := r.Queries().Facts(r.Context(), c.ProjectID, false)
 		if e != nil {
 			return e
 		}

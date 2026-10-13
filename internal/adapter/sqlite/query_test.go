@@ -41,7 +41,7 @@ func TestQueryFactsStayInSnapshotAndEnforceProjectScope(t *testing.T) {
 		if e != nil {
 			return e
 		}
-		facts, e := read.Queries().Facts(read.Context(), c.ProjectID)
+		facts, e := read.Queries().Facts(read.Context(), c.ProjectID, false)
 		if e != nil {
 			return e
 		}
@@ -53,18 +53,18 @@ func TestQueryFactsStayInSnapshotAndEnforceProjectScope(t *testing.T) {
 	if e != nil {
 		t.Fatal(e)
 	}
-	if _, e = escaped.Facts(ctx, c.ProjectID); !errors.Is(e, domain.ErrScopeClosed) {
+	if _, e = escaped.Facts(ctx, c.ProjectID, false); !errors.Is(e, domain.ErrScopeClosed) {
 		t.Fatal(e)
 	}
 	e = s.Snapshot(ctx, func(read port.ReadSnapshot) error {
-		facts, e := read.Queries().Facts(read.Context(), c.ProjectID)
+		facts, e := read.Queries().Facts(read.Context(), c.ProjectID, false)
 		if e != nil {
 			return e
 		}
 		if facts.Issues["td-one"].Revision != 3 || len(facts.Logs["td-one"]) != 1 || facts.Logs["td-one"][0].Message != "Concurrent activity" {
 			t.Fatal("missing new snapshot", facts)
 		}
-		other, e := read.Queries().Facts(read.Context(), "another-project")
+		other, e := read.Queries().Facts(read.Context(), "another-project", false)
 		if e != nil {
 			return e
 		}
@@ -90,7 +90,7 @@ func TestQueryFactsStayInSnapshotAndEnforceProjectScope(t *testing.T) {
 		t.Fatal(e)
 	}
 	e = s.Snapshot(ctx, func(read port.ReadSnapshot) error {
-		facts, e := read.Queries().Facts(read.Context(), c.ProjectID)
+		facts, e := read.Queries().Facts(read.Context(), c.ProjectID, false)
 		if e != nil {
 			return e
 		}

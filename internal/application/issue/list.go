@@ -6,10 +6,12 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/yoophi/td-backend/internal/application/access"
 	"github.com/yoophi/td-backend/internal/application/port"
 	"github.com/yoophi/td-backend/internal/domain"
+	"github.com/yoophi/td-backend/internal/domain/tdq"
 )
 
 type ListOptions struct {
@@ -27,6 +29,7 @@ type ListResult struct {
 
 func (s *Service) List(ctx context.Context, c domain.Caller, q ListOptions) (ListResult, error) {
 	result := ListResult{Issues: []domain.Issue{}}
+	explicitSort := q.Sort != "" || q.Order != ""
 	if q.Limit == 0 {
 		q.Limit = 200
 	}
@@ -48,8 +51,8 @@ func (s *Service) List(ctx context.Context, c domain.Caller, q ListOptions) (Lis
 	if q.Order != "asc" && q.Order != "desc" {
 		return result, invalid("order", "expected asc or desc")
 	}
-	if q.SearchMode != "text" && q.SearchMode != "auto" {
-		return result, invalid("search_mode", "TDQ query support is not yet available")
+	if q.SearchMode != "text" && q.SearchMode != "auto" && q.SearchMode != "tdq" {
+		return result, invalid("search_mode", "expected auto, text or tdq")
 	}
 	for _, group := range []struct {
 		field           string
@@ -74,9 +77,40 @@ func (s *Service) List(ctx context.Context, c domain.Caller, q ListOptions) (Lis
 		if e != nil {
 			return e
 		}
-		all, e := read.Issues().All(ctx, c.ProjectID, q.WithDeleted)
-		if e != nil {
-			return e
+		useTDQ, keepTDQSort := false, false
+		if q.Search != "" && q.SearchMode != "text" {
+			parsed, parseErr := tdq.ParseIssues(q.Search)
+			if parseErr != nil && q.SearchMode == "tdq" {
+				return invalid("search", parseErr.Error())
+			}
+			if parseErr == nil {
+				useTDQ = true
+				keepTDQSort = parsed.Sort != nil && !explicitSort
+			}
+		}
+		var all, candidates []domain.Issue
+		if useTDQ {
+			facts, err := read.Queries().Facts(ctx, c.ProjectID, q.WithDeleted)
+			if err != nil {
+				return err
+			}
+			for _, i := range facts.Issues {
+				all = append(all, i)
+			}
+			now := time.Now()
+			if s.Runner.Now != nil {
+				now = s.Runner.Now()
+			}
+			candidates, err = tdq.Select(q.Search, &facts, tdq.EvalContext{CurrentSession: c.SessionID, Now: now}, tdq.FilterOptions{IncludeClosed: true, WithDeleted: q.WithDeleted})
+			if err != nil {
+				return invalid("search", err.Error())
+			}
+		} else {
+			all, e = read.Issues().All(ctx, c.ProjectID, q.WithDeleted)
+			if e != nil {
+				return e
+			}
+			candidates = all
 		}
 		parents := map[string]string{}
 		for _, i := range all {
@@ -92,7 +126,7 @@ func (s *Service) List(ctx context.Context, c domain.Caller, q ListOptions) (Lis
 			}
 			return false
 		}
-		for _, i := range all {
+		for _, i := range candidates {
 			if len(q.Statuses) > 0 {
 				if !slices.Contains(q.Statuses, string(i.Status)) {
 					continue
@@ -122,39 +156,41 @@ func (s *Service) List(ctx context.Context, c domain.Caller, q ListOptions) (Lis
 			if !labelsMatch {
 				continue
 			}
-			if q.Search != "" && !strings.Contains(strings.ToLower(i.ID+"\n"+i.Title+"\n"+i.Description+"\n"+i.Acceptance), strings.ToLower(q.Search)) {
+			if !useTDQ && q.Search != "" && !strings.Contains(strings.ToLower(i.ID+"\n"+i.Title+"\n"+i.Description+"\n"+i.Acceptance), strings.ToLower(q.Search)) {
 				continue
 			}
 			result.Issues = append(result.Issues, i)
 		}
-		slices.SortFunc(result.Issues, func(a, b domain.Issue) int {
-			var n int
-			switch q.Sort {
-			case "priority":
-				n = cmp.Compare(a.Priority, b.Priority)
-			case "created":
-				n = a.CreatedAt.Compare(b.CreatedAt)
-			case "updated":
-				n = a.UpdatedAt.Compare(b.UpdatedAt)
-			case "id":
-				n = cmp.Compare(a.ID, b.ID)
-			case "title":
-				n = cmp.Compare(a.Title, b.Title)
-			case "status":
-				n = cmp.Compare(a.Status, b.Status)
-			case "type":
-				n = cmp.Compare(a.Type, b.Type)
-			case "points":
-				n = cmp.Compare(a.Points, b.Points)
-			}
-			if q.Order == "desc" {
-				n = -n
-			}
-			if n == 0 {
-				return cmp.Compare(a.ID, b.ID)
-			}
-			return n
-		})
+		if !keepTDQSort {
+			slices.SortFunc(result.Issues, func(a, b domain.Issue) int {
+				var n int
+				switch q.Sort {
+				case "priority":
+					n = cmp.Compare(a.Priority, b.Priority)
+				case "created":
+					n = a.CreatedAt.Compare(b.CreatedAt)
+				case "updated":
+					n = a.UpdatedAt.Compare(b.UpdatedAt)
+				case "id":
+					n = cmp.Compare(a.ID, b.ID)
+				case "title":
+					n = cmp.Compare(a.Title, b.Title)
+				case "status":
+					n = cmp.Compare(a.Status, b.Status)
+				case "type":
+					n = cmp.Compare(a.Type, b.Type)
+				case "points":
+					n = cmp.Compare(a.Points, b.Points)
+				}
+				if q.Order == "desc" {
+					n = -n
+				}
+				if n == 0 {
+					return cmp.Compare(a.ID, b.ID)
+				}
+				return n
+			})
+		}
 		result.Total = len(result.Issues)
 		result.Limit = q.Limit
 		result.Offset = q.Offset

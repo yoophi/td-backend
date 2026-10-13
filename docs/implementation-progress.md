@@ -193,3 +193,13 @@ GET /query?q=...를 Issue application service에 연결했습니다. 동일 read
 실제 HTTP 테스트에서 정렬, implementer=@me의 Session별 결과, closed 선택과 deleted 제외, empty q, 잘못된 TDQ/note predicate와 잘못된 query parameters의 400을 확인했습니다. 일반 Issue 목록의 search_mode TDQ 연결 및 monitor projection은 아직 남아 있습니다.
 
 일반 query endpoint 추가 후 전체 `go test -race ./...`, `go vet ./...`, `git diff --check` 통과.
+
+### gh-11 — Issue 목록의 TDQ 검색과 snapshot pagination
+
+Issue 목록에 auto/text/tdq 검색을 연결했습니다. auto는 유효한 TDQ를 사용하고 parse/field validation 실패 때만 텍스트 검색으로 fallback합니다. 명시적 tdq는 오류를 반환하며 text는 ID/title/description/acceptance를 검색합니다. TDQ 결과와 status/type/priority/labels/parent/epic 필터를 교차 적용한 뒤 pagination합니다. 명시적인 sort/order가 있으면 해당 정렬을, 없으면 TDQ sort를 유지하며 ID tie-breaker를 사용합니다.
+
+QueryReader에 with_deleted 선택을 추가하여 archive 조회에서도 삭제된 Issue의 활동/파일/관계 facts를 같은 snapshot에서 읽습니다. 일반 query와 Board는 계속 삭제된 Issue를 제외합니다. TDQ 검색은 Issue별 쿼리 없이 기존 5개 batch query를 사용합니다.
+
+HTTP 검증: auto fallback/forced text/invalid TDQ, TDQ sort와 명시적 정렬 우선순위, 기존 필터와 교집합, full DTO, 페이지 total/token, closed 기본 제외와 명시적 선택, with_deleted와 이전 댓글 조건을 확인했습니다. 별도 SQLite writer가 project token 조회 이후 Issue와 change_seq를 변경하도록 주입했을 때 records/total/token은 모두 이전 snapshot을 유지하고 다음 요청만 새 snapshot을 보는 것을 검증했습니다. monitor projection과 available_transitions/presence 연계는 gh-11의 남은 범위입니다.
+
+목록 검색 변경 후 검증: `go test -race ./...`, `go vet ./...`, OpenAPI/GUI 계약 검사와 `git diff --check` 통과했습니다.

@@ -32,19 +32,23 @@ func (r queryRepo) rows(ctx context.Context, query, project string, consume func
 
 // Facts uses five queries regardless of project issue count. All relations are
 // project scoped and evaluated from the same existing transaction as Issues.
-func (r queryRepo) Facts(ctx context.Context, project string) (tdq.Facts, error) {
+func (r queryRepo) Facts(ctx context.Context, project string, withDeleted bool) (tdq.Facts, error) {
 	f := tdq.Facts{Issues: map[string]domain.Issue{}, Logs: map[string][]domain.Log{}, Comments: map[string][]domain.Comment{}, Handoffs: map[string]*domain.Handoff{}, Files: map[string][]domain.IssueFile{}, Dependencies: map[string][]string{}, Rework: map[string]bool{}}
 	if e := r.check(); e != nil {
 		return f, e
 	}
-	issues, e := r.Issues().All(ctx, project, false)
+	issues, e := r.Issues().All(ctx, project, withDeleted)
 	if e != nil {
 		return f, e
 	}
 	for _, i := range issues {
 		f.Issues[i.ID] = i
 	}
-	e = r.rows(ctx, `SELECT a.id,a.issue_id,a.session_id,coalesce(a.work_session_id,''),a.kind,a.message,coalesce(a.log_type,''),a.payload_version,a.payload_json,a.created_at FROM activities a JOIN issues i ON i.project_id=a.project_id AND i.id=a.issue_id WHERE a.project_id=? AND a.deleted_at IS NULL AND i.deleted_at IS NULL ORDER BY a.created_at,a.id`, project, func(rows *sql.Rows) error {
+	live := " AND i.deleted_at IS NULL"
+	if withDeleted {
+		live = ""
+	}
+	e = r.rows(ctx, `SELECT a.id,a.issue_id,a.session_id,coalesce(a.work_session_id,''),a.kind,a.message,coalesce(a.log_type,''),a.payload_version,a.payload_json,a.created_at FROM activities a JOIN issues i ON i.project_id=a.project_id AND i.id=a.issue_id WHERE a.project_id=? AND a.deleted_at IS NULL`+live+` ORDER BY a.created_at,a.id`, project, func(rows *sql.Rows) error {
 		var id, issue, session, ws, kind, message, logType, stamp string
 		var payload []byte
 		var version int
@@ -76,7 +80,7 @@ func (r queryRepo) Facts(ctx context.Context, project string) (tdq.Facts, error)
 	if e != nil {
 		return f, e
 	}
-	e = r.rows(ctx, `SELECT d.issue_id,d.depends_on_id FROM issue_dependencies d JOIN issues i ON i.project_id=d.project_id AND i.id=d.issue_id WHERE d.project_id=? AND i.deleted_at IS NULL ORDER BY d.issue_id,d.depends_on_id`, project, func(rows *sql.Rows) error {
+	e = r.rows(ctx, `SELECT d.issue_id,d.depends_on_id FROM issue_dependencies d JOIN issues i ON i.project_id=d.project_id AND i.id=d.issue_id WHERE d.project_id=?`+live+` ORDER BY d.issue_id,d.depends_on_id`, project, func(rows *sql.Rows) error {
 		var id, target string
 		if e := rows.Scan(&id, &target); e != nil {
 			return e
@@ -87,7 +91,7 @@ func (r queryRepo) Facts(ctx context.Context, project string) (tdq.Facts, error)
 	if e != nil {
 		return f, e
 	}
-	e = r.rows(ctx, `SELECT f.id,f.issue_id,f.file_path,f.role,f.linked_sha,f.linked_at FROM issue_files f JOIN issues i ON i.project_id=f.project_id AND i.id=f.issue_id WHERE f.project_id=? AND i.deleted_at IS NULL ORDER BY f.issue_id,f.file_path,f.role,f.id`, project, func(rows *sql.Rows) error {
+	e = r.rows(ctx, `SELECT f.id,f.issue_id,f.file_path,f.role,f.linked_sha,f.linked_at FROM issue_files f JOIN issues i ON i.project_id=f.project_id AND i.id=f.issue_id WHERE f.project_id=?`+live+` ORDER BY f.issue_id,f.file_path,f.role,f.id`, project, func(rows *sql.Rows) error {
 		var file domain.IssueFile
 		var stamp string
 		if e := rows.Scan(&file.ID, &file.IssueID, &file.FilePath, &file.Role, &file.LinkedSHA, &stamp); e != nil {
@@ -106,7 +110,7 @@ func (r queryRepo) Facts(ctx context.Context, project string) (tdq.Facts, error)
 	}
 	// Effects carry state transitions for both explicit review and handoff's
 	// combined submit-review transaction. Text logs are never parsed as events.
-	e = r.rows(ctx, `SELECT e.entity_id,e.state_version,coalesce(json_extract(e.before_json,'$.issue.status'),''),json_extract(e.after_json,'$.issue.status') FROM operation_effects e JOIN operations o ON o.project_id=e.project_id AND o.row_id=e.operation_row_id JOIN issues i ON i.project_id=e.project_id AND i.id=e.entity_id WHERE e.project_id=? AND e.entity_kind='issue' AND i.deleted_at IS NULL AND i.status IN ('open','in_progress') AND o.command_kind IN ('workflow.transition','workflow.handoff') ORDER BY o.created_at,o.row_id`, project, func(rows *sql.Rows) error {
+	e = r.rows(ctx, `SELECT e.entity_id,e.state_version,coalesce(json_extract(e.before_json,'$.issue.status'),''),json_extract(e.after_json,'$.issue.status') FROM operation_effects e JOIN operations o ON o.project_id=e.project_id AND o.row_id=e.operation_row_id JOIN issues i ON i.project_id=e.project_id AND i.id=e.entity_id WHERE e.project_id=? AND e.entity_kind='issue'`+live+` AND i.status IN ('open','in_progress') AND o.command_kind IN ('workflow.transition','workflow.handoff') ORDER BY o.created_at,o.row_id`, project, func(rows *sql.Rows) error {
 		var id, before, after string
 		var version int
 		if e := rows.Scan(&id, &version, &before, &after); e != nil {

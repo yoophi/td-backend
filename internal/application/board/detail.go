@@ -22,7 +22,7 @@ type MoveCommand struct {
 }
 
 func candidates(read port.ReadSnapshot, project, session, query string, closed bool, now time.Time) ([]domain.Issue, error) {
-	facts, e := read.Queries().Facts(read.Context(), project)
+	facts, e := read.Queries().Facts(read.Context(), project, false)
 	if e != nil {
 		return nil, e
 	}
