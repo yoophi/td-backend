@@ -45,3 +45,15 @@ func (r operationRepo) Save(ctx context.Context, o port.Receipt) error {
 	_, e = r.tx.ExecContext(ctx, `INSERT INTO operations(row_id,project_id,actor_id,session_id,scope_key,operation_id,fingerprint,command_kind,request_method,request_path,representation_version,response_status,response_headers,response_body,created_at) VALUES(?,NULLIF(?,''),?,NULLIF(?,''),?,?,?,?,?,?,?,?,?,?,?)`, o.RowID, o.ProjectID, o.ActorID, o.SessionID, o.Scope, o.Key, o.Fingerprint, o.Kind, o.Method, o.Path, o.RepresentationVersion, o.Reply.Status, string(headers), o.Reply.Body, o.CreatedAt.UTC().Format(time.RFC3339Nano))
 	return classify(e)
 }
+
+func (r operationRepo) SaveEffect(ctx context.Context, effect port.Effect) error {
+	if e := r.check(); e != nil {
+		return e
+	}
+	var before any
+	if effect.BeforeJSON != nil {
+		before = string(effect.BeforeJSON)
+	}
+	_, e := r.tx.ExecContext(ctx, `INSERT INTO operation_effects(project_id,operation_row_id,entity_kind,entity_id,after_revision,state_version,before_json,after_json) VALUES(?,?,?,?,?,?,?,?)`, effect.ProjectID, effect.OperationRowID, effect.EntityKind, effect.EntityID, effect.AfterRevision, effect.StateVersion, before, string(effect.AfterJSON))
+	return classify(e)
+}

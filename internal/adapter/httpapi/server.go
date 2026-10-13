@@ -257,6 +257,8 @@ func writeError(w http.ResponseWriter, e error) {
 		status, code, message = 409, "conflict", "request conflicts with current state"
 	case errors.Is(e, domain.ErrStale):
 		status, code, message = 412, "conflict", "stale revision"
+	case errors.Is(e, domain.ErrPreconditionRequired):
+		status, code, message = 428, "precondition_required", "If-Match observed revision required"
 	case errors.Is(e, domain.ErrUnavailable):
 		status, code, message = 503, "store_error", "store unavailable"
 	}

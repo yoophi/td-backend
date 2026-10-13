@@ -30,4 +30,13 @@ type OperationReader interface {
 }
 type OperationWriter interface {
 	Save(context.Context, Receipt) error
+	SaveEffect(context.Context, Effect) error
+}
+
+// Effect is a versioned aggregate snapshot for conditional undo. BeforeJSON is
+// nil for creation; AfterJSON is always present, including soft-deleted state.
+type Effect struct {
+	ProjectID, OperationRowID, EntityKind, EntityID, AfterRevision string
+	StateVersion                                                   int
+	BeforeJSON, AfterJSON                                          []byte
 }

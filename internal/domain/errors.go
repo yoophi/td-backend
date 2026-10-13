@@ -3,13 +3,14 @@ package domain
 import "errors"
 
 var (
-	ErrNotFound     = errors.New("not found")
-	ErrStale        = errors.New("stale revision")
-	ErrConflict     = errors.New("conflict")
-	ErrForbidden    = errors.New("forbidden")
-	ErrUnauthorized = errors.New("unauthorized")
-	ErrUnavailable  = errors.New("store unavailable")
-	ErrScopeClosed  = errors.New("transaction scope is closed")
+	ErrPreconditionRequired = errors.New("observed revision required")
+	ErrNotFound             = errors.New("not found")
+	ErrStale                = errors.New("stale revision")
+	ErrConflict             = errors.New("conflict")
+	ErrForbidden            = errors.New("forbidden")
+	ErrUnauthorized         = errors.New("unauthorized")
+	ErrUnavailable          = errors.New("store unavailable")
+	ErrScopeClosed          = errors.New("transaction scope is closed")
 )
 
 // ValidationError is transport independent. HTTP adapters preserve its field errors.

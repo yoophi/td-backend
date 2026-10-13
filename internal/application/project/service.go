@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/yoophi/td-backend/internal/application/access"
 	"github.com/yoophi/td-backend/internal/application/port"
 	"github.com/yoophi/td-backend/internal/domain"
 	"strings"
@@ -59,34 +60,9 @@ func ValidateMutation(m port.Mutation) error {
 	return nil
 }
 
-// Authorize is called inside a transaction, including before replaying a receipt.
-func Authorize(ctx context.Context, read port.ReadSnapshot, c domain.Caller, session bool, write bool) error {
-	if c.Actor.ID == "" {
-		return domain.ErrUnauthorized
-	}
-	if !domain.ValidProjectID(c.ProjectID) {
-		return validation("project_id", "expected prj_ followed by UUIDv7")
-	}
-	role, e := read.Access().Role(ctx, c.ProjectID, c.Actor.ID)
-	if e != nil {
-		return e
-	}
-	if write && !role.CanWrite() {
-		return domain.ErrForbidden
-	}
-	if session {
-		if c.SessionID == "" {
-			return validation("X-TD-Session", "registered project session required")
-		}
-		s, e := read.Sessions().Get(ctx, c.ProjectID, c.SessionID)
-		if e != nil {
-			return e
-		}
-		if s.ActorID != c.Actor.ID {
-			return domain.ErrForbidden
-		}
-	}
-	return nil
+// Authorize retains the project service entry point for existing callers.
+func Authorize(ctx context.Context, read port.ReadSnapshot, c domain.Caller, session, write bool) error {
+	return access.Authorize(ctx, read, c, session, write)
 }
 func replay(ctx context.Context, tx port.TxScope, actor, scope string, m port.Mutation) (port.StoredReply, bool, error) {
 	receipt, e := tx.Operations().Get(ctx, actor, scope, m.Key)
