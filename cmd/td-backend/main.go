@@ -56,6 +56,7 @@ func run(ctx context.Context, args []string) error {
 		Handler: httpapi.New(httpapi.Options{
 			Projects: projects, Auth: auth,
 			Boards:       &board.Service{Reads: store, ID: ids.ID, Runner: runner},
+			Audit:        &operation.AuditService{Reads: store},
 			Monitor:      &monitor.Service{Reads: store},
 			Notes:        &note.Service{Reads: store, ID: ids.ID, Runner: runner},
 			Focus:        &focus.Service{Reads: store, Runner: runner},

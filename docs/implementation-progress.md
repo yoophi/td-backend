@@ -235,3 +235,11 @@ Stats와 labels HTTP API를 추가했습니다. 살아 있는 Issue의 전체 �
 gh-11 description과 API 설계를 재점검했습니다. activity 범위는 이미 구현된 Issue activity 조회와 Monitor의 project feed입니다. 별도 프로젝트 activity endpoint는 명세에 없으므로 추가할 필요가 없습니다. 앞선 진행 기록에서 project activity를 남은 별도 endpoint로 표현한 부분을 이 점검으로 정정합니다. list/detail/board/monitor/activity/stats/labels/query 경로와 full DTO/total/token snapshot, batch policy facts, 분류/전이, Focus/presence 및 TDQ 오류 검증이 모두 구현돼 있습니다. 완료한 runtime capabilities를 공개하며 Undo/SSE/changes는 아직 광고하지 않습니다.
 
 직접 완료 기준과 구현을 대조한 self-review입니다. 조건부 Undo·변경 이벤트와 CLI/monitor/serve/GUI 연결은 gh-12~19에 남아 있어 전체 구현 목표는 계속 진행합니다.
+
+## gh-12 — Operation audit 조회와 effect reader
+
+Operation 상세/list API를 application/SQLite/HTTP에 연결했습니다. 저장된 receipt의 응답 status/body와 Session/method/path/시각을 반환하며, 내부 row ID·Actor ID·fingerprint는 노출하지 않습니다. 상세 조회는 project와 외부 UUIDv4 operation key로 검색합니다. actor-scoped idempotency 특성상 다른 Actor가 같은 key를 쓴 경우 409로 거부하여 임의의 receipt를 선택하지 않습니다. 목록은 Session/Issue effect 필터와 안정적인 pagination을 지원합니다.
+
+조건부 Undo가 사용할 project-scoped effect reader도 추가하여 versioned before/after와 after-revision을 읽습니다. 기존 actor/scope 기반 byte-exact replay lookup은 그대로 유지합니다. 실제 HTTP+SQLite에서 저장 응답, filter/page order, 생성 effect version/nullable before, project 격리, scope 수명, malformed/missing key, Actor key 모호성 거부와 기존 actor replay 유지를 검증했습니다. 전체 race/vet/OpenAPI 검사와 추가 collision regression의 race 검증을 수행했습니다.
+
+gh-12 남은 범위는 모든 affected aggregate의 after-revision 검사, Issue/Board/Note/Focus/WorkSession 원자적 Undo, 승인/history 보존과 지원하지 않는 operation 거부입니다. Undo capability는 아직 공개하지 않습니다.

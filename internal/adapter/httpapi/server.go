@@ -10,6 +10,7 @@ import (
 	"github.com/yoophi/td-backend/internal/application/focus"
 	"github.com/yoophi/td-backend/internal/application/monitor"
 	"github.com/yoophi/td-backend/internal/application/note"
+	"github.com/yoophi/td-backend/internal/application/operation"
 	"github.com/yoophi/td-backend/internal/application/worksession"
 	"io"
 	"net/http"
@@ -24,6 +25,7 @@ import (
 )
 
 type Options struct {
+	Audit        *operation.AuditService
 	Monitor      *monitor.Service
 	Focus        *focus.Service
 	Boards       *board.Service
@@ -159,6 +161,9 @@ func New(options ...Options) http.Handler {
 	}
 	if opts.WorkSessions != nil {
 		registerWorkSessions(mux, opts.WorkSessions, protect, caller)
+	}
+	if opts.Audit != nil {
+		registerAudit(mux, opts.Audit, protect, caller)
 	}
 	if opts.Monitor != nil {
 		registerMonitor(mux, opts.Monitor, protect, caller)

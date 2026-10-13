@@ -15,13 +15,19 @@ type operationRepo struct{ *scope }
 func (s *scope) Operations() port.OperationReader      { return operationRepo{s} }
 func (s *scope) OperationWrites() port.OperationWriter { return operationRepo{s} }
 func (r operationRepo) Get(ctx context.Context, actor, scope, key string) (port.Receipt, error) {
-	var o port.Receipt
 	if e := r.check(); e != nil {
-		return o, e
+		return port.Receipt{}, e
 	}
+	return scanReceipt(r.tx.QueryRowContext(ctx, "SELECT "+receiptColumns+" FROM operations WHERE actor_id=? AND scope_key=? AND operation_id=?", actor, scope, key))
+}
+
+const receiptColumns = "row_id,coalesce(project_id,''),actor_id,coalesce(session_id,''),scope_key,operation_id,fingerprint,command_kind,request_method,request_path,representation_version,response_status,response_headers,response_body,created_at"
+
+func scanReceipt(row interface{ Scan(...any) error }) (port.Receipt, error) {
+	var o port.Receipt
 	var stamp string
 	var headers []byte
-	e := r.tx.QueryRowContext(ctx, `SELECT row_id,coalesce(project_id,''),actor_id,coalesce(session_id,''),scope_key,operation_id,fingerprint,command_kind,request_method,request_path,representation_version,response_status,response_headers,response_body,created_at FROM operations WHERE actor_id=? AND scope_key=? AND operation_id=?`, actor, scope, key).Scan(&o.RowID, &o.ProjectID, &o.ActorID, &o.SessionID, &o.Scope, &o.Key, &o.Fingerprint, &o.Kind, &o.Method, &o.Path, &o.RepresentationVersion, &o.Reply.Status, &headers, &o.Reply.Body, &stamp)
+	e := row.Scan(&o.RowID, &o.ProjectID, &o.ActorID, &o.SessionID, &o.Scope, &o.Key, &o.Fingerprint, &o.Kind, &o.Method, &o.Path, &o.RepresentationVersion, &o.Reply.Status, &headers, &o.Reply.Body, &stamp)
 	if errors.Is(e, sql.ErrNoRows) {
 		return o, domain.ErrNotFound
 	}

@@ -63,6 +63,7 @@ func newHarness(t *testing.T) *harness {
 	h.server = httptest.NewServer(New(Options{
 		Projects: svc, Auth: auth,
 		Boards:       &board.Service{Reads: store, ID: ids.ID, Runner: runner},
+		Audit:        &operation.AuditService{Reads: store},
 		Monitor:      &monitor.Service{Reads: store},
 		Notes:        &note.Service{Reads: store, ID: ids.ID, Runner: runner},
 		Focus:        &focus.Service{Reads: store, Runner: runner},

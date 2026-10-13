@@ -25,7 +25,14 @@ type Receipt struct {
 	Reply                                                                StoredReply
 	CreatedAt                                                            time.Time
 }
+type AuditFilter struct {
+	SessionID, IssueID string
+	Limit, Offset      int
+}
 type OperationReader interface {
+	AuditGet(context.Context, string, string) (Receipt, error)
+	List(context.Context, string, AuditFilter) ([]Receipt, error)
+	Effects(context.Context, string, string) ([]Effect, error)
 	Get(context.Context, string, string, string) (Receipt, error)
 }
 type OperationWriter interface {
