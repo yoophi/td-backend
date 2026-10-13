@@ -8,14 +8,17 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"reflect"
 	"strings"
 
+	"github.com/yoophi/td-backend/internal/application/issue"
 	"github.com/yoophi/td-backend/internal/application/port"
 	"github.com/yoophi/td-backend/internal/application/project"
 	"github.com/yoophi/td-backend/internal/domain"
 )
 
 type Options struct {
+	Issues   *issue.Service
 	Projects *project.Service
 	Auth     port.Authenticator
 }
@@ -121,6 +124,9 @@ func New(options ...Options) http.Handler {
 			Current  string           `json:"current_session_id"`
 		}{list, c.SessionID})
 	}))
+	if opts.Issues != nil {
+		registerIssueMutations(mux, opts.Issues, protect, caller)
+	}
 	return mux
 }
 func mutation(r *http.Request, cmd any) (port.Mutation, error) {
@@ -159,7 +165,19 @@ func decode(w http.ResponseWriter, r *http.Request, dst any) error {
 	if e = json.Unmarshal(data, &fields); e != nil || fields == nil {
 		return invalid("body", "expected JSON object")
 	}
+	allowed := map[string]bool{}
+	target := reflect.TypeOf(dst).Elem()
+	for i := 0; i < target.NumField(); i++ {
+		name := strings.Split(target.Field(i).Tag.Get("json"), ",")[0]
+		if name != "" && name != "-" {
+			allowed[name] = true
+		}
+	}
 	for field, value := range fields {
+		if !allowed[field] {
+			return invalid(field, "unknown field")
+		}
+
 		if string(value) == "null" {
 			return invalid(field, "null is not allowed")
 		}

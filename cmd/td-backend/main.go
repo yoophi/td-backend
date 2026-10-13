@@ -9,6 +9,8 @@ import (
 	"github.com/yoophi/td-backend/internal/adapter/identity"
 	"github.com/yoophi/td-backend/internal/adapter/sqlite"
 	"github.com/yoophi/td-backend/internal/adapter/tokenauth"
+	"github.com/yoophi/td-backend/internal/application/issue"
+	"github.com/yoophi/td-backend/internal/application/operation"
 	"github.com/yoophi/td-backend/internal/application/project"
 	"github.com/yoophi/td-backend/internal/config"
 	"log/slog"
@@ -43,7 +45,7 @@ func run(ctx context.Context, args []string) error {
 	if err != nil {
 		return err
 	}
-	server := &http.Server{Handler: httpapi.New(httpapi.Options{Projects: projects, Auth: auth}), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 30 * time.Second, IdleTimeout: time.Minute, BaseContext: func(net.Listener) context.Context { return ctx }}
+	server := &http.Server{Handler: httpapi.New(httpapi.Options{Projects: projects, Auth: auth, Issues: &issue.Service{Reads: store, ID: ids.ID, Runner: operation.Runner{Writes: store, Encoder: receiptcodec.Codec{}, ID: ids.ID, Now: time.Now}}}), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 30 * time.Second, IdleTimeout: time.Minute, BaseContext: func(net.Listener) context.Context { return ctx }}
 	// WriteTimeout stays zero for future long-lived SSE streams.
 	slog.Info("td-backend listening", "address", listener.Addr().String(), "sqlite", store.Version())
 	done := make(chan error, 1)

@@ -20,6 +20,8 @@ import (
 	"github.com/yoophi/td-backend/internal/adapter/identity"
 	"github.com/yoophi/td-backend/internal/adapter/sqlite"
 	"github.com/yoophi/td-backend/internal/adapter/tokenauth"
+	"github.com/yoophi/td-backend/internal/application/issue"
+	"github.com/yoophi/td-backend/internal/application/operation"
 	"github.com/yoophi/td-backend/internal/application/port"
 	"github.com/yoophi/td-backend/internal/application/project"
 	"github.com/yoophi/td-backend/internal/domain"
@@ -51,7 +53,7 @@ func newHarness(t *testing.T) *harness {
 	ids := identity.New()
 	svc := &project.Service{Writes: store, Reads: store, Encoder: receiptcodec.Codec{}, ID: ids.ID, Now: time.Now}
 	h := &harness{t: t, store: store, projects: svc, auth: auth, path: path}
-	h.server = httptest.NewServer(New(Options{Projects: svc, Auth: auth}))
+	h.server = httptest.NewServer(New(Options{Projects: svc, Auth: auth, Issues: &issue.Service{Reads: store, ID: ids.ID, Runner: operation.Runner{Writes: store, Encoder: receiptcodec.Codec{}, ID: ids.ID, Now: time.Now}}}))
 	t.Cleanup(func() { h.server.Close(); h.store.Close() })
 	return h
 }

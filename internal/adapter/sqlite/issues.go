@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"github.com/yoophi/td-backend/internal/application/port"
 	"github.com/yoophi/td-backend/internal/domain"
 	"reflect"
 	"strings"
@@ -164,4 +165,45 @@ func (r issueRepo) Save(ctx context.Context, project string, issue domain.Issue,
 		}
 	}
 	return nil
+}
+
+func (r issueRepo) Dependencies(ctx context.Context, project, issue string) ([]port.Dependency, error) {
+	if e := r.check(); e != nil {
+		return nil, e
+	}
+	rows, e := r.tx.QueryContext(ctx, `SELECT id,issue_id,depends_on_id FROM issue_dependencies WHERE project_id=? AND issue_id=? ORDER BY depends_on_id`, project, issue)
+	if e != nil {
+		return nil, classify(e)
+	}
+	defer rows.Close()
+	result := []port.Dependency{}
+	for rows.Next() {
+		var d port.Dependency
+		if e = rows.Scan(&d.ID, &d.IssueID, &d.DependsOnID); e != nil {
+			return nil, e
+		}
+		result = append(result, d)
+	}
+	return result, rows.Err()
+}
+func (r issueRepo) AddDependency(ctx context.Context, project string, d port.Dependency) error {
+	if e := r.check(); e != nil {
+		return e
+	}
+	_, e := r.tx.ExecContext(ctx, `INSERT INTO issue_dependencies(project_id,id,issue_id,depends_on_id) VALUES(?,?,?,?)`, project, d.ID, d.IssueID, d.DependsOnID)
+	return classify(e)
+}
+func (r issueRepo) SupersedeReviews(ctx context.Context, project, issue string, now time.Time) error {
+	if e := r.check(); e != nil {
+		return e
+	}
+	_, e := r.tx.ExecContext(ctx, `UPDATE issue_reviews SET superseded_at=? WHERE project_id=? AND issue_id=? AND superseded_at IS NULL`, now.UTC().Format(time.RFC3339Nano), project, issue)
+	return classify(e)
+}
+func (r issueRepo) RecordCreation(ctx context.Context, project, issue, session, operation string, now time.Time) error {
+	if e := r.check(); e != nil {
+		return e
+	}
+	_, e := r.tx.ExecContext(ctx, `INSERT INTO issue_session_history(project_id,id,issue_id,session_id,action,operation_row_id,created_at) VALUES(?,?,?,?,'created',?,?)`, project, operation+":created:"+issue, issue, session, operation, now.UTC().Format(time.RFC3339Nano))
+	return classify(e)
 }

@@ -4,6 +4,7 @@ package port
 import (
 	"context"
 	"github.com/yoophi/td-backend/internal/domain"
+	"time"
 )
 
 type UnitOfWork interface {
@@ -43,8 +44,14 @@ type ProjectWriter interface {
 type IssueReader interface {
 	Get(context.Context, string, string, bool) (*domain.Issue, error)
 	List(context.Context, string, bool) ([]domain.Issue, error)
+	Dependencies(context.Context, string, string) ([]Dependency, error)
 }
 type IssueWriter interface {
 	// expected=0 creates a record; otherwise atomically checks expected revision.
 	Save(context.Context, string, domain.Issue, int64) error
+	AddDependency(context.Context, string, Dependency) error
+	SupersedeReviews(context.Context, string, string, time.Time) error
+	RecordCreation(context.Context, string, string, string, string, time.Time) error
 }
+
+type Dependency struct{ ID, IssueID, DependsOnID string }

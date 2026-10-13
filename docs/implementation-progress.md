@@ -27,3 +27,11 @@ Project·owner membership·builtin Board·init response receipt를 같은 transa
 실제 SQLite 검증: 동일 key 동시 요청 8건에서 callback/effect 1회, 재시작 후 원래 status/body/ETag 재생, fingerprint 충돌, 신규 key stale revision, membership 제거 후 replay 거부, encoder/receipt insert/deferred FK commit 실패 시 aggregate·counter·effect·receipt rollback. 강한 단일 If-Match parser와 누락 428 매핑도 추가했습니다. `go test -race ./...` 및 `go vet ./...`가 통과했습니다.
 
 gh-7은 아직 완료되지 않았습니다. Issue CRUD application service·HTTP routes·전체 DTO와 endpoint acceptance 검증이 남아 있습니다.
+
+### gh-7 — Issue mutation API
+
+`POST /issues`, `PATCH /issues/{issue_id}`, `DELETE /issues/{issue_id}`, `POST /issues/{issue_id}/restore`를 project scope에 구현했습니다. typed command와 완전한 Issue DTO를 사용하며 빈 문자열·false·0·빈 labels 배열을 구분합니다. 생성 시 dependency와 creator involvement history를 동일 transaction에 저장하고, 수정은 If-Match를 검사하며 내용 변경 시 content version과 review supersession을 처리합니다. 부모 순환과 존재하지 않는 관계를 거부합니다. before/after issue와 dependency snapshot을 operation effect로 저장합니다.
+
+검증: 실제 HTTP+SQLite에서 Unicode title 제한, enum/points/calendar date, unknown/case-mismatched/null 필드, 기본값, 428/412/409, canonical request retry와 byte-exact response/ETag, 필드 clear, soft delete/restore, parent cycle 및 실패한 dependency 생성 rollback을 확인했습니다. `go test -race ./...`, `go vet ./...` 통과.
+
+남은 범위: list pagination/filter/token, 상세 context와 related record 조회, gh-7 전체 acceptance 확인. gh-8에서 기존 td와 substantive edit/review policy parity를 고정하고, gh-12에서 versioned effect를 사용하는 조건부 Undo를 구현합니다. 현재 runtime capabilities는 완성된 project/session 기능만 광고합니다.
