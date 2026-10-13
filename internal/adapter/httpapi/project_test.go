@@ -21,6 +21,7 @@ import (
 	"github.com/yoophi/td-backend/internal/adapter/sqlite"
 	"github.com/yoophi/td-backend/internal/adapter/tokenauth"
 	"github.com/yoophi/td-backend/internal/application/board"
+	"github.com/yoophi/td-backend/internal/application/changes"
 	"github.com/yoophi/td-backend/internal/application/focus"
 	"github.com/yoophi/td-backend/internal/application/issue"
 	"github.com/yoophi/td-backend/internal/application/monitor"
@@ -37,6 +38,7 @@ import (
 const testToken = "0123456789abcdef0123456789abcdef"
 
 type harness struct {
+	events   *changes.Hub
 	t        *testing.T
 	store    *sqlite.Store
 	projects *project.Service
@@ -61,9 +63,13 @@ func newHarness(t *testing.T) *harness {
 	svc := &project.Service{Writes: store, Reads: store, Encoder: receiptcodec.Codec{}, ID: ids.ID, Now: time.Now}
 	h := &harness{t: t, store: store, projects: svc, auth: auth, path: path}
 	runner := operation.Runner{Writes: store, Encoder: receiptcodec.Codec{}, ID: ids.ID, Now: time.Now}
+	hub := changes.NewHub(context.Background(), &changes.Service{Reads: store}, changes.HubOptions{PollEvery: 10 * time.Millisecond})
+	t.Cleanup(hub.Close)
+	h.events = hub
 	h.server = httptest.NewServer(New(Options{
 		Projects: svc, Auth: auth,
-		Boards:       &board.Service{Reads: store, ID: ids.ID, Runner: runner},
+		Boards: &board.Service{Reads: store, ID: ids.ID, Runner: runner},
+		Events: hub, EventOptions: EventOptions{PingEvery: 30 * time.Millisecond, WriteTimeout: time.Second},
 		Undo:         &undo.Service{Runner: runner},
 		Audit:        &operation.AuditService{Reads: store},
 		Monitor:      &monitor.Service{Reads: store},

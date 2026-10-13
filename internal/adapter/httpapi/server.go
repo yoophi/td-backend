@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/yoophi/td-backend/internal/application/board"
+	"github.com/yoophi/td-backend/internal/application/changes"
 	"github.com/yoophi/td-backend/internal/application/focus"
 	"github.com/yoophi/td-backend/internal/application/monitor"
 	"github.com/yoophi/td-backend/internal/application/note"
@@ -26,6 +27,8 @@ import (
 )
 
 type Options struct {
+	Events       *changes.Hub
+	EventOptions EventOptions
 	Undo         *undo.Service
 	Audit        *operation.AuditService
 	Monitor      *monitor.Service
@@ -163,6 +166,9 @@ func New(options ...Options) http.Handler {
 	}
 	if opts.WorkSessions != nil {
 		registerWorkSessions(mux, opts.WorkSessions, protect, caller)
+	}
+	if opts.Events != nil {
+		registerEvents(mux, opts.Events, opts.Auth, opts.EventOptions, protect, caller)
 	}
 	if opts.Undo != nil {
 		registerUndo(mux, opts.Undo, protect, caller)

@@ -10,6 +10,7 @@ import (
 	"github.com/yoophi/td-backend/internal/adapter/sqlite"
 	"github.com/yoophi/td-backend/internal/adapter/tokenauth"
 	"github.com/yoophi/td-backend/internal/application/board"
+	"github.com/yoophi/td-backend/internal/application/changes"
 	"github.com/yoophi/td-backend/internal/application/focus"
 	"github.com/yoophi/td-backend/internal/application/issue"
 	"github.com/yoophi/td-backend/internal/application/monitor"
@@ -53,10 +54,13 @@ func run(ctx context.Context, args []string) error {
 		return err
 	}
 	runner := operation.Runner{Writes: store, Encoder: receiptcodec.Codec{}, ID: ids.ID, Now: time.Now}
+	hub := changes.NewHub(ctx, &changes.Service{Reads: store}, changes.HubOptions{})
+	defer hub.Close()
 	server := &http.Server{
 		Handler: httpapi.New(httpapi.Options{
 			Projects: projects, Auth: auth,
 			Boards:       &board.Service{Reads: store, ID: ids.ID, Runner: runner},
+			Events:       hub,
 			Undo:         &undo.Service{Runner: runner},
 			Audit:        &operation.AuditService{Reads: store},
 			Monitor:      &monitor.Service{Reads: store},
@@ -69,7 +73,7 @@ func run(ctx context.Context, args []string) error {
 		ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 30 * time.Second,
 		IdleTimeout: time.Minute, BaseContext: func(net.Listener) context.Context { return ctx },
 	}
-	// WriteTimeout stays zero for future long-lived SSE streams.
+	// WriteTimeout stays zero; SSE applies a bounded deadline to each write.
 	slog.Info("td-backend listening", "address", listener.Addr().String(), "sqlite", store.Version())
 	done := make(chan error, 1)
 	go func() { done <- server.Serve(listener) }()

@@ -263,3 +263,13 @@ Issue effect version 1/2/3을 지원합니다. revision/content_version을 증�
 실제 HTTP+SQLite에서 필드·파일·legacy v1·생성·삭제 inverse, 증가하는 revision/content_version, activity append/delete delta, 승인 supersession/audit 보존, 이후 변화의 409, dependency/parent cycle rollback, 새로운 review Undo 이후 rework 복원을 검증했습니다. 실제 epic 승인 cascade를 취소하면서 모든 자손/부모 상태와 revision을 함께 복원하며, 중간 Issue UPDATE 실패의 전체 rollback 및 같은 key 복구를 확인했습니다. 참여 history가 그대로 유지되고 review rows는 보존된 채 superseded되며 예전 승인을 사용한 close는 거부됩니다. unknown effect version과 Project/Session creation 및 Undo의 재-Undo도 거부합니다.
 
 gh-12 완료 기준을 직접 대조한 self-review입니다. 공유 aggregate Undo 테스트와 합쳐 모든 affected aggregate의 after-revision 검사, 다중 effect 원자성, 증가하는 revision, approval/history 보존을 검증했습니다. 전체 race/vet/OpenAPI와 추가 unsupported-version/capability 회귀를 통과했습니다. operations/undo capabilities를 공개합니다. Project changes/SSE와 CLI/monitor/serve/GUI 연결은 gh-13~19에서 계속 진행합니다.
+
+## gh-13 — Project changes와 SSE hub
+
+GET changes와 events를 구현했습니다. project hub는 subscriber가 있을 때만 250ms마다 committed change_seq를 짧은 read snapshot으로 읽습니다. 같은 project의 subscriber는 poller 하나를 공유하며 capacity-one queue가 오래된 invalidation을 최신 token으로 교체합니다. 마지막 subscriber가 해제되면 poller를 취소하며 전체 subscriber는 기본 128개로 제한합니다. SSE 대기/전송 중에는 DB scope/connection을 유지하지 않습니다.
+
+초기/reconnect cursor가 현재 token과 다르면 refresh를 전송하며 같으면 다음 ping/change를 기다립니다. id는 opaque change_token이고 refresh payload는 token/timestamp, ping은 token만 포함합니다. 기본 ping은 15초입니다. 각 write/flush에 5초 deadline을 적용하며 context cancellation, hub 종료, 권한·credential 철회 또는 read/write 실패 시 구독을 해제합니다. event/ping 전 credential과 project/Session 권한을 다시 확인합니다. 긴 서버 WriteTimeout 대신 SSE write별 deadline을 사용하고 hub 수명은 서버 context에 연결했습니다.
+
+실제 HTTP+SQLite 테스트에서 payload/ID, 새 mutation refresh, receipt replay의 token 유지, 이전/동일 cursor 재접속, ping, query/header 오류, membership/token revocation 후 stream 종료를 확인했습니다. 느린 subscriber가 최신 notice만 받고 빠른 subscriber를 막지 않는 것과 subscriber cap/shutdown도 검증했습니다. reader pool보다 많은 8개 stream을 열어도 조회가 가능하며 hub 종료는 HTTP stream을 닫습니다. 쓰기를 받지 못하는 transport에 deadline을 주입한 테스트에서 handler 종료와 subscriber 해제를 확인했습니다. 전체 race/vet/OpenAPI 및 추가 deadline regression을 통과했습니다.
+
+gh-13 완료 기준을 직접 대조한 self-review입니다. changes/events capabilities를 공개합니다. 서버 이벤트의 CLI polling/td serve relay와 GUI 소비는 gh-14~19 통합 범위로 계속 진행합니다.

@@ -22,7 +22,7 @@ type Service struct {
 	Now     func() time.Time
 }
 
-var capabilities = []string{"projects", "sessions", "idempotent_init", "issues", "workflow", "relations", "activity", "boards", "notes", "work_sessions", "focus", "query", "monitor", "stats", "labels", "presence", "operations", "undo"}
+var capabilities = []string{"projects", "sessions", "idempotent_init", "issues", "workflow", "relations", "activity", "boards", "notes", "work_sessions", "focus", "query", "monitor", "stats", "labels", "presence", "operations", "undo", "changes", "events"}
 
 func Capabilities() []string { return append([]string{}, capabilities...) }
 

@@ -216,12 +216,12 @@ func TestCompletedReadCapabilitiesAreAdvertised(t *testing.T) {
 	for _, c := range out.Data.Capabilities {
 		caps[c] = true
 	}
-	for _, name := range []string{"issues", "workflow", "boards", "notes", "work_sessions", "query", "monitor", "stats", "labels", "focus", "presence", "operations", "undo"} {
+	for _, name := range []string{"issues", "workflow", "boards", "notes", "work_sessions", "query", "monitor", "stats", "labels", "focus", "presence", "operations", "undo", "changes", "events"} {
 		if !caps[name] {
 			t.Fatal("missing capability", name)
 		}
 	}
-	for _, name := range []string{"events", "sse", "changes"} {
+	for _, name := range []string{"import", "export", "sync"} {
 		if caps[name] {
 			t.Fatal("unfinished capability", name)
 		}
