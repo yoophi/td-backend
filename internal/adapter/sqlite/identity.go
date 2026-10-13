@@ -123,13 +123,3 @@ func (r sessionRepo) Create(ctx context.Context, project string, s domain.Sessio
 	_, e := r.tx.ExecContext(ctx, "INSERT INTO sessions(project_id,"+sessionColumns+") VALUES(?,?,?,?,?,?,?,?,?,?)", project, s.ID, s.ActorID, s.Name, s.Branch, s.AgentType, s.ContextID, s.PreviousSessionID, s.StartedAt.UTC().Format(time.RFC3339Nano), s.LastActivity.UTC().Format(time.RFC3339Nano))
 	return classify(e)
 }
-
-type boardRepo struct{ *scope }
-
-func (r boardRepo) Create(ctx context.Context, project string, b domain.Board) error {
-	if e := r.check(); e != nil {
-		return e
-	}
-	_, e := r.tx.ExecContext(ctx, `INSERT INTO boards(project_id,id,name,query,is_builtin,view_mode,revision,created_at,updated_at) VALUES(?,?,?,?,?,?,1,?,?)`, project, b.ID, b.Name, b.Query, b.IsBuiltin, b.ViewMode, b.CreatedAt.UTC().Format(time.RFC3339Nano), b.UpdatedAt.UTC().Format(time.RFC3339Nano))
-	return classify(e)
-}

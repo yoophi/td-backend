@@ -236,6 +236,8 @@ type WorkSessionIssue struct {
 
 // Board represents a named view into issues with custom ordering
 type Board struct {
+	Revision     int64      `json:"revision_number"`
+	DeletedAt    *time.Time `json:"deleted_at,omitempty"`
 	ID           string     `json:"id"`
 	Name         string     `json:"name"`
 	Query        string     `json:"query"`      // TDQ query defining which issues appear

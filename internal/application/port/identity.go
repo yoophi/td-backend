@@ -24,6 +24,3 @@ type SessionReader interface {
 type SessionWriter interface {
 	Create(context.Context, string, domain.Session) error
 }
-type BoardWriter interface {
-	Create(context.Context, string, domain.Board) error
-}

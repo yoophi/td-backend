@@ -24,6 +24,7 @@ type ReadSnapshot interface {
 	Sessions() SessionReader
 	Operations() OperationReader
 	Workflow() WorkflowReader
+	Boards() BoardReader
 }
 type TxScope interface {
 	ReadSnapshot

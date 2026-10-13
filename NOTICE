@@ -9,3 +9,6 @@ to the documented Issue DTO. The same upstream attribution applies.
 internal/domain/reviewpolicy/policy.go and policy_test.go are adapted from
 internal/reviewpolicy at the same upstream commit c64d7873d8f555dd49875e34e6b39ae5257e2e0c.
 Imports are mapped to this repository domain; policy behavior and tests are preserved.
+
+internal/domain/tdq lexer, parser, AST and corresponding tests are adapted from
+internal/query at the same upstream commit. Imports map to the backend domain.

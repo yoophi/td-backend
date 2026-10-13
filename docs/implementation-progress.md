@@ -117,3 +117,11 @@ HTTP+SQLite 검증: 댓글 replay, 댓글·로그의 승인 유지, soft-delete 
 완료 기준 확인: 기존 policy 테스트와 실제 HTTP의 네 가지 mode/creator/minor/issue-wide history 검증이 통과했습니다. 기존 handoff/review basis 무효화, dependency cycle·project 격리, 부모 cascade rollback 테스트에 더해 descendant UPDATE 실패 시 부모 승인·자손 변경 전체 rollback, 같은 key 재시도 및 byte-exact receipt replay를 확인했습니다. `go test -race ./...`, `go vet ./...`, OpenAPI 구조/참조 및 GUI 필수 30 route 계약 검사, `git diff --check` 통과. 직접 코드와 upstream 승인·종료 경로를 대조한 self-review입니다.
 
 이로써 gh-8의 workflow/review/handoff/관계·활동 범위를 완료했습니다. Board/TDQ/Note/WorkSession/monitor projection/Undo/SSE 및 CLI·monitor·serve 통합은 gh-9~19에서 계속 진행합니다.
+
+## gh-9 — 진행 중: TDQ 문법과 Board 저장소
+
+기존 td의 TDQ lexer/parser/AST와 해당 테스트를 domain/tdq로 이식했습니다. import를 backend domain으로 바꾸고 날짜 literal 검증 helper를 분리했습니다. SQL compiler나 DB 의존 실행기를 domain에 넣지 않았으며, 전체 query 평가와 batch facts는 후속 작업으로 남아 있습니다. upstream MIT attribution은 NOTICE에 기록했습니다.
+
+Board에 revision/deleted_at을 추가하고 snapshot reader와 scoped writer ports를 구현했습니다. SQLite adapter는 project별 목록/상세·archive 조회, observed revision 저장, soft-delete 후 이름 재사용, 카드 위치 읽기와 원자적 교체를 지원합니다. 위치를 같은 writer transaction에서 삭제 후 삽입하므로 기존 카드가 sparse key를 교환할 때 중간 UNIQUE 충돌을 피합니다.
+
+검증: 실제 SQLite에서 key 교환, stale revision, project 격리, 잘못된 다른 project의 Issue 연결과 중복 위치의 rollback, 카드 clear, archive/이름 재사용, callback 외부 scope 접근 거부를 확인했습니다. `go test -race ./...`, `go vet ./...`, `git diff --check` 통과. Board application/HTTP CRUD·builtin 보호, TDQ 후보 평가, slot/move 알고리즘과 endpoint 통합은 gh-9의 남은 범위입니다.
