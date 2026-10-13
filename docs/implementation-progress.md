@@ -53,3 +53,9 @@ gh-7 acceptance 확인: 실제 HTTP에서 missing If-Match 428, stale 412, unkno
 Issue PATCH의 임시 보수적 review 무효화를 기존 정책의 필드 기준으로 교체했습니다. title/description/type/priority/minor/parent 변경은 content version을 증가시키고 승인을 supersede합니다. labels/points/date/sprint/acceptance 변경은 현재 td와 동일하게 approval을 유지합니다. 실제 SQLite 테스트로 metadata 변경에서도 aggregate revision은 증가하면서 content version과 review attribution은 유지되고, substantive 변경에서는 review와 attribution이 무효화되는지 확인했습니다.
 
 검증: `go test -race ./...`, `go vet ./...`. gh-8은 진행 중이며 workflow/action API, review/handoff persistence와 cascade·관계 transaction 구현은 아직 남아 있습니다.
+
+### gh-8 — workflow facts와 저장소
+
+Application-owned WorkflowReader/WorkflowWriter ports를 추가하고 SQLite adapter에서 참여 이력, active review와 basis content version/handoff ID, typed activity/handoff/snapshot 저장·조회를 구현했습니다. application에 SQL handle을 노출하지 않습니다. Workflow facts loader는 같은 transaction의 Issue·Project policy·history·review·latest handoff로 reviewer/closer 판단 입력을 구성합니다.
+
+유효한 approval은 decision, 미supersede 상태, 현재 content version, 최신 handoff ID와 해당 content version이 일치할 때만 인정합니다. 실제 SQLite에서 history 기반 구현 참여 판단, trusted acknowledgement와 delegated 거부, 오래된 basis 거부, handoff snapshot round trip, active review 유일성과 receipt FK 실패 시 history rollback을 검증했습니다. `go test -race ./...`, `go vet ./...` 통과. 상태 변경 service/HTTP, review/handoff orchestration, cascade와 relation commands는 계속 gh-8의 미완료 범위입니다.

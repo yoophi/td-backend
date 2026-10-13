@@ -23,6 +23,7 @@ type ReadSnapshot interface {
 	Access() AccessReader
 	Sessions() SessionReader
 	Operations() OperationReader
+	Workflow() WorkflowReader
 }
 type TxScope interface {
 	ReadSnapshot
@@ -32,6 +33,7 @@ type TxScope interface {
 	SessionWrites() SessionWriter
 	BoardWrites() BoardWriter
 	OperationWrites() OperationWriter
+	WorkflowWrites() WorkflowWriter
 }
 type ProjectReader interface {
 	Get(context.Context, string) (*domain.Project, error)
