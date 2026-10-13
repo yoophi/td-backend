@@ -273,3 +273,10 @@ GET changes와 events를 구현했습니다. project hub는 subscriber가 있을
 실제 HTTP+SQLite 테스트에서 payload/ID, 새 mutation refresh, receipt replay의 token 유지, 이전/동일 cursor 재접속, ping, query/header 오류, membership/token revocation 후 stream 종료를 확인했습니다. 느린 subscriber가 최신 notice만 받고 빠른 subscriber를 막지 않는 것과 subscriber cap/shutdown도 검증했습니다. reader pool보다 많은 8개 stream을 열어도 조회가 가능하며 hub 종료는 HTTP stream을 닫습니다. 쓰기를 받지 못하는 transport에 deadline을 주입한 테스트에서 handler 종료와 subscriber 해제를 확인했습니다. 전체 race/vet/OpenAPI 및 추가 deadline regression을 통과했습니다.
 
 gh-13 완료 기준을 직접 대조한 self-review입니다. changes/events capabilities를 공개합니다. 서버 이벤트의 CLI polling/td serve relay와 GUI 소비는 gh-14~19 통합 범위로 계속 진행합니다.
+
+## gh-14 — CLI init 실제 서버 검증 (진행 중)
+
+CLI integration worktree에서 backend store parser/config/init과 durable idempotency intent를 구현 중입니다. 초기화의 유실 응답·로컬 config 저장 실패·동시 실행·충돌 연결 거절은 targeted race 테스트를 통과했습니다. `scripts/check_cli_init.py`는 빌드한 서버/CLI 바이너리를 받아 임시 SQLite 서버와 Git 저장소에서 최초 생성, 반복 init, worktree의 동일 Project 재사용, 명시 Project attach, 충돌/잘못된 ID 거절 및 로컬 SQLite/token 미저장을 검증합니다. 실제 두 바이너리로 통과했습니다.
+
+실행 예: `python3 scripts/check_cli_init.py --backend /absolute/path/td-backend --cli /absolute/path/td`.
+CLI의 전체 release-safe `make test`는 진행 중이며 gh-14는 아직 완료 처리하지 않았습니다. issue reader/workflow, monitor, serve/GUI 연동은 후속 gh-15~19 범위입니다.
