@@ -185,3 +185,11 @@ strict JSON decoder에 명시적인 최상위 nullable 필드 허용 경로를 �
 gh-10 완료 기준을 직접 검토했습니다. Note soft deletion/revision, WorkSession 소유권·종료 후 수정 제한·태그 clear/project 격리, Focus/WorkSession 내부 revision 및 change counter를 실제 HTTP/SQLite 테스트로 확인했습니다. 일반 query/monitor projection 및 Focus를 포함한 projection 통합은 gh-11, 저장된 effect의 조건부 Undo 실행은 gh-12에서 이어갑니다.
 
 Focus 통합 후 전체 `go test -race ./...`, `go vet ./...`, OpenAPI/GUI 계약 검사 및 `git diff --check` 통과. 직접 구현과 완료 기준을 대조한 self-review입니다.
+
+## gh-11 — 일반 TDQ query endpoint
+
+GET /query?q=...를 Issue application service에 연결했습니다. 동일 read snapshot에서 project 권한과 Session을 확인하고 batch facts를 읽어 TDQ를 평가합니다. caller Session으로 @me를 해석하고, query가 선택한 closed Issue도 반환하되 soft-deleted Issue는 제외합니다. 결과는 TDQ sort와 ID tie-breaker로 정렬하며 제한 없는 ID 배열입니다. 빈 q는 허용하지만 q 누락/중복/추가 query parameter는 거부합니다.
+
+실제 HTTP 테스트에서 정렬, implementer=@me의 Session별 결과, closed 선택과 deleted 제외, empty q, 잘못된 TDQ/note predicate와 잘못된 query parameters의 400을 확인했습니다. 일반 Issue 목록의 search_mode TDQ 연결 및 monitor projection은 아직 남아 있습니다.
+
+일반 query endpoint 추가 후 전체 `go test -race ./...`, `go vet ./...`, `git diff --check` 통과.
