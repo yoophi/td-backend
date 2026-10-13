@@ -137,3 +137,13 @@ Position 입력은 기존 위치에서 이동 카드를 제외한 뒤의 1-based
 검증: HTTP+SQLite에서 builtin 제한, 유효하지 않은 TDQ/날짜/query 누락, 생성·visit·삭제·pin의 정확한 receipt replay, missing/stale revision, receipt 실패 시 Board revision/positions rollback 및 동일 key 복구, project 간 card/Board/Session 격리를 확인했습니다. versioned effect의 이전/이후 Board revision과 positions도 확인했습니다. 순서 테스트는 top/middle/end/reposition, gap exhaustion 및 정수 양 극단을 포함합니다. 전체 `go test -race ./...`, `go vet ./...`, OpenAPI/GUI 계약 검사와 `git diff --check` 통과. service 조립 정리 후 cmd/HTTP 테스트도 통과했습니다.
 
 남은 gh-9 범위: TDQ 후보 평가와 Board detail 카드 projection, before_id move 및 해당 HTTP 회귀 테스트. capability는 아직 완성된 Board 기능으로 광고하지 않습니다.
+
+### gh-9 — snapshot 기반 TDQ 평가기
+
+기존 td의 순수 field matcher와 cross-entity AST 평가를 domain/tdq에 이식했습니다. SQL 변환과 DB 실행은 포함하지 않으며, typed Facts의 Issue·로그·댓글·handoff·파일·dependency·rework 데이터를 메모리에서 평가합니다. AND/OR/NOT 혼합 조건은 전체 AST를 평가하여 cross-entity 조건과 일반 필드의 논리 관계를 보존합니다. 스캔을 1만 건에서 자르지 않으며, nullable 정렬과 ID tie-breaker로 결정적인 결과를 반환합니다.
+
+백엔드 보완: 기존 구현에서 누락되던 dep.blocks/dep.depends_on 및 활동 날짜 equality/inequality를 평가하고, Issue query에 note 전용 필드·prefix 단독 필드·지원하지 않는 함수 필드를 전달하면 오류로 반환합니다. 기존 문법에서 거부하던 cross-entity ordering 연산자는 계속 명시적으로 거부합니다. security activity log 타입을 query enum에도 포함합니다. Board 생성·수정 검증은 이 Issue query 검증 경로를 사용합니다.
+
+검증: upstream evaluator 테스트와 추가 snapshot 테스트에서 혼합 논리, descendant/epic/dependency/file/Session 조건, 누락·삭제 prerequisite, 날짜의 일 단위·시각 단위 비교, nullable sort, 10,010개 입력의 후반부 일치 결과를 확인했습니다. 전체 `go test -race ./...`, `go vet ./...`, `git diff --check` 통과. 이름·주석 및 Board 검증 정리 후 TDQ와 HTTP 테스트도 통과했습니다.
+
+아직 SQLite batch facts reader와 Board detail/move HTTP 연결은 남아 있습니다. gh-9을 완료로 표시하지 않았으며 gh-11의 일반 query/monitor 통합도 별도 작업입니다.

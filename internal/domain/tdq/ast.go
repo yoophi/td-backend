@@ -217,7 +217,7 @@ var EnumValues = map[string][]string{
 	"status":    {"open", "in_progress", "blocked", "in_review", "closed"},
 	"type":      {"bug", "feature", "task", "epic", "chore"},
 	"priority":  {"P0", "P1", "P2", "P3", "P4"},
-	"log.type":  {"progress", "blocker", "decision", "hypothesis", "tried", "result", "orchestration"},
+	"log.type":  {"progress", "blocker", "decision", "hypothesis", "tried", "result", "orchestration", "security"},
 	"file.role": {"implementation", "test", "reference", "config"},
 }
 

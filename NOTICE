@@ -12,3 +12,9 @@ Imports are mapped to this repository domain; policy behavior and tests are pres
 
 internal/domain/tdq lexer, parser, AST and corresponding tests are adapted from
 internal/query at the same upstream commit. Imports map to the backend domain.
+
+internal/domain/tdq/evaluator.go, evaluator_test.go and cross_entity.go adapt
+internal/query/evaluator.go and the pure cross-entity evaluation from execute.go
+at the same upstream commit. SQL compilation and database execution are omitted.
+Facts-based execution, issue query validation, dependency predicates, activity
+date equality and deterministic sorting are backend adaptations.

@@ -51,12 +51,9 @@ func validate(b *domain.Board) error {
 	if b.ViewMode != "swimlanes" && b.ViewMode != "backlog" {
 		return invalid("view_mode", "expected swimlanes or backlog")
 	}
-	q, e := tdq.Parse(b.Query)
+	_, e := tdq.ParseIssues(b.Query)
 	if e != nil {
 		return invalid("query", e.Error())
-	}
-	if errs := q.Validate(); len(errs) != 0 {
-		return invalid("query", errs[0].Error())
 	}
 	return nil
 }
