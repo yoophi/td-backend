@@ -88,7 +88,7 @@ func TestWorkflowParentCascadeRollsBackHandoffAndRetries(t *testing.T) {
 	base := "/v1/projects/" + p + "/issues"
 	create := func(title, parent string) string {
 		t.Helper()
-		status, _, data := issueRequest(t, h, "POST", base, session, key(t), "", fmt.Sprintf(`{"title":%q,"parent_id":%q}`, title, parent))
+		status, _, data := issueRequest(t, h, "POST", base, session, key(t), "", fmt.Sprintf(`{"title":%q,"parent_id":%q,"type":"epic"}`, title, parent))
 		if status != 201 {
 			t.Fatal(status, string(data))
 		}

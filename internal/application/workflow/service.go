@@ -2,6 +2,7 @@ package workflow
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -218,6 +219,12 @@ func (s *Service) Transition(ctx context.Context, c domain.Caller, m port.Mutati
 				return nil, e
 			}
 		}
+		if i.Status == domain.StatusClosed && before.Status != domain.StatusClosed {
+			result.ParentStatusUpdates, result.AutoUnblocked, e = s.cascadeClose(command, c, i)
+			if e != nil {
+				return nil, e
+			}
+		}
 		return result, nil
 	})
 }
@@ -277,10 +284,13 @@ func (s *Service) cascadeReview(command operation.CommandContext, c domain.Calle
 		}
 		seen[parentID] = true
 		parent, e := tx.Issues().Get(ctx, c.ProjectID, parentID, false)
+		if errors.Is(e, domain.ErrNotFound) {
+			break
+		}
 		if e != nil {
 			return nil, e
 		}
-		if parent.Status != domain.StatusOpen && parent.Status != domain.StatusInProgress {
+		if parent.Type != domain.TypeEpic || parent.Status == domain.StatusInReview || parent.Status == domain.StatusClosed {
 			break
 		}
 		related, e := tx.Issues().Context(ctx, c.ProjectID, parent.ID, false)
@@ -300,6 +310,9 @@ func (s *Service) cascadeReview(command operation.CommandContext, c domain.Calle
 		before := *parent
 		parent.Status = domain.StatusInReview
 		parent.ReviewRequestedBySession = c.SessionID
+		if e = s.cascadeLog(command, c, *parent, "Auto-submitted for review: all children ready"); e != nil {
+			return nil, e
+		}
 		if e = persist(command, c, before, parent); e != nil {
 			return nil, e
 		}

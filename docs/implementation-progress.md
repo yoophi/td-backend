@@ -75,3 +75,11 @@ approve/close/reject를 observed workflow service에 연결했습니다. trusted
 HTTP+SQLite에서 무기명 구현자 승인 거부, 잘못된 self-review/attribution 입력, delegated 우회 거부, record-only와 close attribution, 동일 승인 key 재생, 재오픈/반려 이력 보존을 검증했습니다. receipt INSERT 실패 시 review·closed state·참여 이력의 rollback과 동일 key 재시도를 검증했습니다. `go test -race ./...`, `go vet ./...` 통과.
 
 남은 gh-8 범위에는 close/approval cascade, review 전용 endpoint와 explicit status, relation/activity commands 및 전체 parity/원자성 검증이 포함됩니다. self_close_exception의 비어 있지 않은 값은 아직 명시적으로 거부합니다.
+
+### gh-8 — 부모 종료·의존 Issue 자동 해제
+
+종료된 자식의 모든 sibling이 closed이면 epic 부모와 상위 epic을 재귀적으로 종료합니다. 각 부모에 closed attribution/history, activity log와 versioned effect를 기록합니다. 종료된 원래 Issue와 부모에 의존하는 blocked Issue는 모든 prerequisite이 closed인 경우만 open으로 바꾸고 implementer claim을 해제합니다. 응답에 모든 parent_status_updates와 auto_unblocked를 포함하며 중복 변경을 방지합니다.
+
+기존 td를 확인하여 review/close 부모 cascade는 epic에만 적용하도록 정정했습니다. 삭제된 부모는 cascade 대상에서 제외하며, review 부모 cascade에도 activity log를 기록합니다.
+
+검증: 실제 HTTP+SQLite에서 2단계 부모 종료와 dependent 해제, 미해결 prerequisite이 있는 dependent 유지, non-epic 부모 유지, 단일 operation의 aggregate effect 4개, byte-exact replay를 확인했습니다. dependent UPDATE 실패를 주입했을 때 자식·부모·상위 epic 종료가 모두 rollback되며 같은 key 재시도가 성공합니다. 전체 race suite 및 변경 후 cascade regression, `go vet ./...` 통과. gh-8의 나머지 관계·활동·review/status API와 epic 승인 시 descendant cascade 검증은 계속 진행합니다.
