@@ -35,3 +35,13 @@ gh-7은 아직 완료되지 않았습니다. Issue CRUD application service·HTT
 검증: 실제 HTTP+SQLite에서 Unicode title 제한, enum/points/calendar date, unknown/case-mismatched/null 필드, 기본값, 428/412/409, canonical request retry와 byte-exact response/ETag, 필드 clear, soft delete/restore, parent cycle 및 실패한 dependency 생성 rollback을 확인했습니다. `go test -race ./...`, `go vet ./...` 통과.
 
 남은 범위: list pagination/filter/token, 상세 context와 related record 조회, gh-7 전체 acceptance 확인. gh-8에서 기존 td와 substantive edit/review policy parity를 고정하고, gh-12에서 versioned effect를 사용하는 조건부 Undo를 구현합니다. 현재 runtime capabilities는 완성된 project/session 기능만 광고합니다.
+
+### gh-7 — 완료: 목록·상세 조회와 acceptance
+
+Issue 목록은 전체 필드, total/limit/offset/has_more와 project change token을 반환합니다. 기본 closed/deleted 제외, 상태·type·priority·labels·parent/epic·text 검색, 정렬과 ID tie-breaker, archive 조회를 지원합니다. records와 change counter는 같은 snapshot에서 읽습니다. 현재 조회는 project records를 메모리에서 필터링하며 TDQ와 monitor projection은 gh-11에서 확장합니다. search_mode=tdq는 현재 명시적 validation error이며 auto 검색은 text 동작입니다.
+
+상세 조회는 logs/comments/latest handoff/children/dependencies/incoming dependencies/files 및 선택한 reviews를 같은 SQLite transaction에서 조회합니다. 배열은 항상 배열로 직렬화하며, soft-deleted Issue는 with_deleted=true로 조회하여 복원용 ETag를 얻습니다. 저장된 activity/file/review fixture와 project isolation, API의 filter/pagination/empty page 및 change token 변경을 검증했습니다.
+
+gh-7 acceptance 확인: 실제 HTTP에서 missing If-Match 428, stale 412, unknown field 400, key fingerprint 충돌 409, 반복 mutation 응답/ETag 동일성을 확인했습니다. 동일 key 동시 8건에서 effect 1회, receipt 저장 실패와 deferred FK commit 실패의 전체 rollback은 실제 SQLite runner 통합 테스트로 확인했습니다. 수정 응답을 버린 뒤 서버·DB pool을 재시작하고 같은 요청의 status/body/ETag가 원래 receipt와 정확히 일치하고 revision이 한 번만 증가했음을 추가 검증했습니다. `go test -race ./...`, `go vet ./...`, OpenAPI validator 통과.
+
+전체 구현 목표는 계속 진행 중입니다. Workflow/review parity, TDQ·Board·Note·WorkSession·Monitor·Undo·SSE, CLI/store/init 및 serve/GUI 연동은 별도 등록 task에 남아 있습니다.

@@ -3,7 +3,7 @@
   "info": {
     "title": "td-backend Store API",
     "version": "0.1.0",
-    "description": "Proposed API contract for td CLI, td monitor and td serve -> td-gui. No HTTP server or remote client is implemented in this repository. Adapted operations reuse domain/response semantics, not wire compatibility with existing project API. All project writes are transactional, revision checked where applicable, and have durable idempotent receipts."
+    "description": "Proposed API contract for td CLI, td monitor and td serve -> td-gui. Implementation is incremental; consult runtime capabilities and docs/implementation-progress.md for supported operations. The complete contract includes planned operations. Adapted operations reuse domain/response semantics, not wire compatibility with existing project API. All project writes are transactional, revision checked where applicable, and have durable idempotent receipts."
   },
   "servers": [
     {

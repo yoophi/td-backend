@@ -73,10 +73,19 @@ func (r issueRepo) Get(ctx context.Context, project, id string, deleted bool) (*
 	return &issue, err
 }
 func (r issueRepo) List(ctx context.Context, project string, all bool) ([]domain.Issue, error) {
+	return r.list(ctx, project, all, false)
+}
+func (r issueRepo) All(ctx context.Context, project string, deleted bool) ([]domain.Issue, error) {
+	return r.list(ctx, project, true, deleted)
+}
+func (r issueRepo) list(ctx context.Context, project string, all, deleted bool) ([]domain.Issue, error) {
 	if err := r.check(); err != nil {
 		return nil, err
 	}
-	q := "SELECT " + issueProjection + " FROM issues i WHERE project_id=? AND deleted_at IS NULL"
+	q := "SELECT " + issueProjection + " FROM issues i WHERE project_id=?"
+	if !deleted {
+		q += " AND deleted_at IS NULL"
+	}
 	if !all {
 		q += " AND status <> 'closed'"
 	}

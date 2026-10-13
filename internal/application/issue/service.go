@@ -259,3 +259,26 @@ func (s *Service) Get(ctx context.Context, c domain.Caller, id string, deleted b
 	})
 	return i, e
 }
+
+type Detail struct {
+	Issue   domain.Issue
+	Context port.IssueContext
+}
+
+func (s *Service) Detail(ctx context.Context, c domain.Caller, id string, deleted, reviews bool) (Detail, error) {
+	var result Detail
+	e := s.Reads.Snapshot(ctx, func(read port.ReadSnapshot) error {
+		ctx := read.Context()
+		if e := access.Authorize(ctx, read, c, true, false); e != nil {
+			return e
+		}
+		i, e := read.Issues().Get(ctx, c.ProjectID, id, deleted)
+		if e != nil {
+			return e
+		}
+		result.Issue = *i
+		result.Context, e = read.Issues().Context(ctx, c.ProjectID, id, reviews)
+		return e
+	})
+	return result, e
+}

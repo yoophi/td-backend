@@ -44,7 +44,9 @@ type ProjectWriter interface {
 type IssueReader interface {
 	Get(context.Context, string, string, bool) (*domain.Issue, error)
 	List(context.Context, string, bool) ([]domain.Issue, error)
+	All(context.Context, string, bool) ([]domain.Issue, error)
 	Dependencies(context.Context, string, string) ([]Dependency, error)
+	Context(context.Context, string, string, bool) (IssueContext, error)
 }
 type IssueWriter interface {
 	// expected=0 creates a record; otherwise atomically checks expected revision.
@@ -55,3 +57,13 @@ type IssueWriter interface {
 }
 
 type Dependency struct{ ID, IssueID, DependsOnID string }
+
+type IssueContext struct {
+	Logs                    []domain.Log
+	Comments                []domain.Comment
+	LatestHandoff           *domain.Handoff
+	Children                []domain.Issue
+	Dependencies, BlockedBy []Dependency
+	Files                   []domain.IssueFile
+	Reviews                 []domain.IssueReview
+}

@@ -1,8 +1,10 @@
 package httpapi
 
 import (
+	"github.com/yoophi/td-backend/internal/adapter/httpapi/receiptcodec"
 	"io"
 	"net/http"
+	"strconv"
 
 	"github.com/yoophi/td-backend/internal/application/issue"
 	"github.com/yoophi/td-backend/internal/application/port"
@@ -10,6 +12,37 @@ import (
 )
 
 func registerIssueMutations(mux *http.ServeMux, svc *issue.Service, protect func(http.HandlerFunc) http.HandlerFunc, caller func(*http.Request) domain.Caller) {
+
+	registerIssueList(mux, svc, protect, caller)
+	mux.HandleFunc("GET /v1/projects/{project_id}/issues/{issue_id}", protect(func(w http.ResponseWriter, r *http.Request) {
+		values := r.URL.Query()
+		for k, v := range values {
+			if (k != "with" && k != "with_deleted") || len(v) != 1 {
+				writeError(w, invalid(k, "unknown or repeated query parameter"))
+				return
+			}
+		}
+		reviews := values.Get("with") == "reviews"
+		if _, present := values["with"]; present && !reviews {
+			writeError(w, invalid("with", "expected reviews"))
+			return
+		}
+		deleted := false
+		if value, present := values["with_deleted"]; present {
+			if value[0] != "true" && value[0] != "false" {
+				writeError(w, invalid("with_deleted", "expected true or false"))
+				return
+			}
+			deleted, _ = strconv.ParseBool(value[0])
+		}
+		detail, e := svc.Detail(r.Context(), caller(r), r.PathValue("issue_id"), deleted, reviews)
+		if e != nil {
+			writeError(w, e)
+			return
+		}
+		w.Header().Set("ETag", `"`+domain.Revision(detail.Issue.Revision)+`"`)
+		writeSuccess(w, 200, receiptcodec.DetailDTOFrom(detail, reviews))
+	}))
 	finish := func(w http.ResponseWriter, reply port.StoredReply, e error) {
 		if e != nil {
 			writeError(w, e)
