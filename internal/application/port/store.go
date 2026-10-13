@@ -25,6 +25,7 @@ type ReadSnapshot interface {
 	Operations() OperationReader
 	Workflow() WorkflowReader
 	Boards() BoardReader
+	Queries() QueryReader
 }
 type TxScope interface {
 	ReadSnapshot

@@ -94,7 +94,7 @@ docker run --rm \
   docker.swagger.io/swaggerapi/swagger-ui
 ```
 
-브라우저에서 `http://127.0.0.1:8080`을 엽니다. serve 명세는 volume의 파일을 `api/td-serve.swagger.json`으로 바꾸면 됩니다. 문서 탐색은 가능하지만 API 실행은 backend 구현 후 사용할 수 있습니다.
+브라우저에서 `http://127.0.0.1:8080`을 엽니다. serve 명세는 volume의 파일을 `api/td-serve.swagger.json`으로 바꾸면 됩니다. 구현된 backend endpoint는 인증 정보를 설정해 실행할 수 있습니다. 아직 구현 중인 endpoint와 serve 명세는 설계 계약입니다.
 
 ## 명세 재생성 및 검증
 
@@ -110,7 +110,7 @@ export TD_BACKEND_BOOTSTRAP_TOKEN="$(openssl rand -hex 32)"
 curl http://127.0.0.1:7000/healthz
 ```
 
-Bootstrap token은 32자 이상이며 digest만 SQLite에 저장합니다. 설정 token을 변경하면 기존 bootstrap credential은 폐기됩니다. `/healthz` 외 구현된 API는 bearer token을 요구합니다. 현재 구현된 routes는 `GET /v1/capabilities`, `GET/POST /v1/projects`, `GET /v1/projects/{project_id}`, `GET/POST /v1/projects/{project_id}/sessions`입니다. Session 등록을 제외한 project-scoped 조회는 등록된 `X-TD-Session`도 필요합니다.
+Bootstrap token은 32자 이상이며 digest만 SQLite에 저장합니다. 설정 token을 변경하면 기존 bootstrap credential은 폐기됩니다. `/healthz` 외 구현된 API는 bearer token을 요구합니다. 현재 project·Session 등록/조회, Issue CRUD와 workflow/review/handoff, dependency·file·comment·log·activity, Board CRUD·TDQ 카드 조회·pin/unpin·move API를 구현했습니다. Note·WorkSession·일반 query/monitor projection·Undo·SSE와 CLI 통합은 진행 중입니다. 구현 및 검증 기록은 [진행 기록](docs/implementation-progress.md)을 참고하세요. Session 등록을 제외한 project-scoped 조회는 등록된 `X-TD-Session`도 필요합니다.
 
 OpenAPI 및 DDL 명세는 Python 3와 개발 의존성으로 검증합니다.
 

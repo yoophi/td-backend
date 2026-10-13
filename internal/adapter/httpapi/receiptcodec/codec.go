@@ -17,7 +17,7 @@ func (Codec) Encode(kind string, outcome any) (port.StoredReply, error) {
 	headers := map[string]string{"Content-Type": "application/json"}
 	switch kind {
 	case "project.create", "session.create":
-	case "board.create", "board.update", "board.delete", "board.visit", "board.position", "board.unpin":
+	case "board.create", "board.update", "board.delete", "board.visit", "board.position", "board.unpin", "board.move":
 		result, ok := outcome.(board.Result)
 		if !ok {
 			return port.StoredReply{}, fmt.Errorf("invalid board outcome")
@@ -34,7 +34,7 @@ func (Codec) Encode(kind string, outcome any) (port.StoredReply, error) {
 			outcome = struct {
 				Deleted bool `json:"deleted"`
 			}{true}
-		case "board.position":
+		case "board.position", "board.move":
 			outcome = struct {
 				Positioned bool `json:"positioned"`
 			}{true}

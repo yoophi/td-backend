@@ -147,3 +147,13 @@ Position 입력은 기존 위치에서 이동 카드를 제외한 뒤의 1-based
 검증: upstream evaluator 테스트와 추가 snapshot 테스트에서 혼합 논리, descendant/epic/dependency/file/Session 조건, 누락·삭제 prerequisite, 날짜의 일 단위·시각 단위 비교, nullable sort, 10,010개 입력의 후반부 일치 결과를 확인했습니다. 전체 `go test -race ./...`, `go vet ./...`, `git diff --check` 통과. 이름·주석 및 Board 검증 정리 후 TDQ와 HTTP 테스트도 통과했습니다.
 
 아직 SQLite batch facts reader와 Board detail/move HTTP 연결은 남아 있습니다. gh-9을 완료로 표시하지 않았으며 gh-11의 일반 query/monitor 통합도 별도 작업입니다.
+
+### gh-9 — 완료: snapshot 카드 조회와 before_id 이동
+
+SQLite QueryReader는 Issue 수와 무관하게 5개 batch query로 Issue·활동·파일·의존 관계·rework facts를 읽습니다. Board 정의·TDQ 후보·명시적 위치는 같은 snapshot에서 읽으며, 이동은 같은 writer transaction에서 후보를 평가합니다. rework는 자유 형식 로그 대신 versioned operation effects의 review 전이를 사용합니다. gh-12 Undo 구현 시 취소된 전이의 rework 반영도 통합해야 합니다.
+
+GET Board detail은 전체 Issue DTO와 sparse position을 반환합니다. before_id 이동은 필요한 visible prefix만 위치를 확정하며 숨겨진 카드의 key와 timestamp를 유지합니다. closed 카드 포함 여부, 간격 소진·overflow 재배치, 원자적 위치 교체를 지원합니다. category는 기존 td serve와 같은 빈 값이며 monitor 분류는 gh-11 범위입니다.
+
+완료 기준을 직접 검토했습니다. 기존 builtin 보호·slot/sparse key·If-Match·project 격리 검증에 더해 실제 HTTP+SQLite에서 상세 query 결과, before_id 순서, closed/hidden 카드, byte-exact replay, stale revision, 위치 INSERT 실패의 전체 rollback과 동일 key 복구를 확인했습니다. WAL 동시 writer 상황에서도 facts가 기존 read snapshot을 유지하고 callback 밖 접근을 거부합니다. 작은 카드 집합의 모든 위치 부분집합·이동 조합과 hidden key 극단값을 검사했습니다. `go test -race ./...`, `go vet ./...`, OpenAPI/GUI 계약 검사와 `git diff --check`가 통과했습니다.
+
+이로써 gh-9 범위를 완료했습니다. 일반 TDQ query/monitor API는 gh-11에서, Note·WorkSession은 gh-10에서 이어갑니다.

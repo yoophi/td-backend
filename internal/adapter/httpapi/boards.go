@@ -12,6 +12,40 @@ import (
 
 func registerBoards(mux *http.ServeMux, svc *board.Service, protect func(http.HandlerFunc) http.HandlerFunc, caller func(*http.Request) domain.Caller) {
 	const base = "/v1/projects/{project_id}/boards"
+	mux.HandleFunc("GET "+base+"/{board_id}", protect(func(w http.ResponseWriter, r *http.Request) {
+		values := r.URL.Query()
+		for k, v := range values {
+			if k != "include_closed" || len(v) != 1 || (v[0] != "true" && v[0] != "false") {
+				writeError(w, invalid(k, "expected one include_closed=true or false parameter"))
+				return
+			}
+		}
+		detail, e := svc.Detail(r.Context(), caller(r), r.PathValue("board_id"), values.Get("include_closed") == "true")
+		if e != nil {
+			writeError(w, e)
+			return
+		}
+		w.Header().Set("ETag", `"`+domain.Revision(detail.Board.Revision)+`"`)
+		writeSuccess(w, 200, receiptcodec.BoardDetailDTOFrom(detail))
+	}))
+	mux.HandleFunc("POST "+base+"/{board_id}/move", protect(func(w http.ResponseWriter, r *http.Request) {
+		var cmd board.MoveCommand
+		if e := decode(w, r, &cmd); e != nil {
+			writeError(w, e)
+			return
+		}
+		m, e := mutation(r, cmd)
+		if e != nil {
+			writeError(w, e)
+			return
+		}
+		reply, e := svc.Move(r.Context(), caller(r), m, r.PathValue("board_id"), r.Header.Get("If-Match"), cmd)
+		if e != nil {
+			writeError(w, e)
+			return
+		}
+		writeReply(w, reply)
+	}))
 	mux.HandleFunc("GET "+base, protect(func(w http.ResponseWriter, r *http.Request) {
 		if len(r.URL.Query()) > 0 {
 			writeError(w, invalid("query", "unexpected query parameter"))
