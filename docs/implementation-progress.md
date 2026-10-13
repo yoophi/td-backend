@@ -253,3 +253,13 @@ Board는 전체 sparse positions와 정의를 복원하고 Note 삭제는 이전
 실제 HTTP/SQLite 검증: 필드 수정·삭제·생성·pin·Focus·tag/end inverse, 증가하는 revision, byte-exact replay와 원본 재취소 거부, 다른 Session의 개인 aggregate 거부, 사유 audit, mixed effect 중간 쓰기 실패의 전체 rollback 및 같은 key 복구, 뒤쪽 effect 후속 변경의 앞쪽 aggregate 무변경을 확인했습니다. 이전 state의 omitted nullable 값이 복원 대상에 남지 않도록 zero-state decode를 사용합니다. 실제 version 1 DB를 version 2로 올려 기존 WorkSession의 보존과 archive/activity 접근 제한을 검증했습니다. 전체 race/vet/OpenAPI 및 추가 Board restore/create 회귀 race 검증이 통과했습니다.
 
 현재 Issue effect version 1/2/3은 준비 단계에서 409로 거부합니다. Issue 필드·관계·파일·activity delta inverse와 다중 Issue cascade/approval/history/TDQ rework 연계는 gh-12의 남은 범위입니다. 전체 Undo capability는 아직 광고하지 않습니다.
+
+### gh-12 — 완료: Issue·관계·활동 Undo와 cascade
+
+Issue effect version 1/2/3을 지원합니다. revision/content_version을 증가시키며 업무 필드와 dependency/file state를 복원합니다. version 1에서 기록하지 않은 파일은 유지합니다. creation inverse는 soft delete이며 삭제 inverse는 live 상태를 복원합니다. 활동 delta는 기존 row의 soft-delete 상태를 복구하거나 새 활동을 숨기고 본문/attribution/audit row는 보존합니다. Undo는 security log와 version 3 inverse effect를 기록합니다.
+
+모든 Issue inverse는 기존 승인을 supersede하고 reviewer attribution을 제거합니다. 기존 participation/review rows를 삭제하거나 이전 handoff basis를 다시 유효하게 만들지 않습니다. 취소된 workflow operation은 TDQ rework 계산에서 제외하므로 review 제출의 inverse 후 원래 rework를 다시 표시합니다. 복원 결과에서 부모/의존 관계 그래프의 순환을 확인하고 발생 시 전체 inverse를 rollback합니다.
+
+실제 HTTP+SQLite에서 필드·파일·legacy v1·생성·삭제 inverse, 증가하는 revision/content_version, activity append/delete delta, 승인 supersession/audit 보존, 이후 변화의 409, dependency/parent cycle rollback, 새로운 review Undo 이후 rework 복원을 검증했습니다. 실제 epic 승인 cascade를 취소하면서 모든 자손/부모 상태와 revision을 함께 복원하며, 중간 Issue UPDATE 실패의 전체 rollback 및 같은 key 복구를 확인했습니다. 참여 history가 그대로 유지되고 review rows는 보존된 채 superseded되며 예전 승인을 사용한 close는 거부됩니다. unknown effect version과 Project/Session creation 및 Undo의 재-Undo도 거부합니다.
+
+gh-12 완료 기준을 직접 대조한 self-review입니다. 공유 aggregate Undo 테스트와 합쳐 모든 affected aggregate의 after-revision 검사, 다중 effect 원자성, 증가하는 revision, approval/history 보존을 검증했습니다. 전체 race/vet/OpenAPI와 추가 unsupported-version/capability 회귀를 통과했습니다. operations/undo capabilities를 공개합니다. Project changes/SSE와 CLI/monitor/serve/GUI 연결은 gh-13~19에서 계속 진행합니다.

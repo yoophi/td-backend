@@ -110,7 +110,7 @@ func (r queryRepo) Facts(ctx context.Context, project string, withDeleted bool) 
 	}
 	// Effects carry state transitions for both explicit review and handoff's
 	// combined submit-review transaction. Text logs are never parsed as events.
-	e = r.rows(ctx, `SELECT e.entity_id,e.state_version,coalesce(json_extract(e.before_json,'$.issue.status'),''),json_extract(e.after_json,'$.issue.status') FROM operation_effects e JOIN operations o ON o.project_id=e.project_id AND o.row_id=e.operation_row_id JOIN issues i ON i.project_id=e.project_id AND i.id=e.entity_id WHERE e.project_id=? AND e.entity_kind='issue'`+live+` AND i.status IN ('open','in_progress') AND o.command_kind IN ('workflow.transition','workflow.handoff') ORDER BY o.created_at,o.row_id`, project, func(rows *sql.Rows) error {
+	e = r.rows(ctx, `SELECT e.entity_id,e.state_version,coalesce(json_extract(e.before_json,'$.issue.status'),''),json_extract(e.after_json,'$.issue.status') FROM operation_effects e JOIN operations o ON o.project_id=e.project_id AND o.row_id=e.operation_row_id JOIN issues i ON i.project_id=e.project_id AND i.id=e.entity_id WHERE e.project_id=? AND e.entity_kind='issue'`+live+` AND i.status IN ('open','in_progress') AND o.command_kind IN ('workflow.transition','workflow.handoff') AND NOT EXISTS (SELECT 1 FROM operation_undos u WHERE u.project_id=o.project_id AND u.original_row_id=o.row_id) ORDER BY o.created_at,o.row_id`, project, func(rows *sql.Rows) error {
 		var id, before, after string
 		var version int
 		if e := rows.Scan(&id, &version, &before, &after); e != nil {

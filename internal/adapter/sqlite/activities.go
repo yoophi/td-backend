@@ -130,3 +130,22 @@ func (r workflowRepo) WorkSessionAccess(ctx context.Context, project, id string)
 	}
 	return access, classify(e)
 }
+
+// SetActivityDeleted restores or hides an activity without deleting its audit data.
+func (r workflowRepo) SetActivityDeleted(ctx context.Context, project, issue, id string, deleted *time.Time, now time.Time) error {
+	if e := r.check(); e != nil {
+		return e
+	}
+	result, e := r.tx.ExecContext(ctx, `UPDATE activities SET deleted_at=?,updated_at=? WHERE project_id=? AND issue_id=? AND id=?`, boardTime(deleted), now.UTC().Format(time.RFC3339Nano), project, issue, id)
+	if e != nil {
+		return classify(e)
+	}
+	n, e := result.RowsAffected()
+	if e != nil {
+		return e
+	}
+	if n != 1 {
+		return domain.ErrNotFound
+	}
+	return nil
+}

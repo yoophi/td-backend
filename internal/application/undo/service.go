@@ -45,7 +45,7 @@ func (s *Service) Run(ctx context.Context, c domain.Caller, m port.Mutation, key
 		// Prepare every aggregate before writing any inverse. The transaction also
 		// rolls back all writes if an inverse, receipt or deferred FK later fails.
 		for _, effect := range effects {
-			p, e := prepare(tx, c, effect)
+			p, e := prepare(tx, c, effect, key, strings.TrimSpace(cmd.Reason))
 			if e != nil {
 				return nil, e
 			}
@@ -60,6 +60,9 @@ func (s *Service) Run(ctx context.Context, c domain.Caller, m port.Mutation, key
 			if i != nil {
 				out.AffectedIssues = append(out.AffectedIssues, *i)
 			}
+		}
+		if e = validateGraph(tx, c, effects); e != nil {
+			return nil, e
 		}
 		if e = tx.OperationWrites().RecordUndo(tx.Context(), c.ProjectID, command.RowID, receipt.RowID, strings.TrimSpace(cmd.Reason)); e != nil {
 			return nil, e

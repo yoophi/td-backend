@@ -10,7 +10,10 @@ import (
 	"github.com/yoophi/td-backend/internal/domain"
 )
 
-func prepare(tx port.TxScope, c domain.Caller, effect port.Effect) (plan, error) {
+func prepare(tx port.TxScope, c domain.Caller, effect port.Effect, key, reason string) (plan, error) {
+	if effect.EntityKind == "issue" {
+		return prepareIssue(tx, c, effect, key, reason)
+	}
 	if effect.StateVersion != 1 {
 		return nil, domain.ErrConflict
 	}

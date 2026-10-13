@@ -6778,7 +6778,7 @@
           "History"
         ],
         "summary": "Conditionally undo recorded mutation",
-        "description": "Backend loads operation after-revisions and checks all affected aggregates atomically. Any later write prevents undo with 409. Inverse, review invalidation, audit and receipt commit atomically; never overwrite subsequent work. Multi-entity cascades are undone as one operation.",
+        "description": "Backend loads operation after-revisions and checks all affected aggregates atomically. Any later write prevents undo with 409. Inverse, review invalidation, audit and receipt commit atomically; never overwrite subsequent work. Multi-entity cascades are undone as one operation. Revisions and content versions increase; review/history audit rows are preserved and approvals are superseded. Project/session creation, heartbeat, undo-of-undo and unknown effect versions are rejected with 409. Focus/WorkSession inverses require their owning session. Restored dependency/parent cycles reject the whole inverse.",
         "responses": {
           "200": {
             "description": "Success",

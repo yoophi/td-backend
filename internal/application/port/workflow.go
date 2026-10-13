@@ -53,6 +53,7 @@ type WorkflowReader interface {
 	WorkSessionAccess(context.Context, string, string) (WorkSessionAccess, error)
 }
 type WorkflowWriter interface {
+	SetActivityDeleted(context.Context, string, string, string, *time.Time, time.Time) error
 	RecordHistory(context.Context, string, domain.IssueSessionHistory, string) error
 	SaveReview(context.Context, string, Review) error
 	AppendActivity(context.Context, string, Activity) error
