@@ -112,6 +112,12 @@ func Select(query string, facts *Facts, ctx EvalContext, opts FilterOptions) ([]
 	if e != nil {
 		return nil, e
 	}
+	return SelectQuery(q, facts, ctx, opts)
+}
+
+// SelectQuery evaluates an already validated Issue query. This lets a caller
+// apply an explicit sort override without rewriting or concatenating input.
+func SelectQuery(q *Query, facts *Facts, ctx EvalContext, opts FilterOptions) ([]domain.Issue, error) {
 	issues := []domain.Issue{}
 	for _, i := range facts.Issues {
 		if (opts.WithDeleted || i.DeletedAt == nil) && (opts.IncludeClosed || i.Status != domain.StatusClosed) {

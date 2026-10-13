@@ -123,3 +123,21 @@ func (r sessionRepo) Create(ctx context.Context, project string, s domain.Sessio
 	_, e := r.tx.ExecContext(ctx, "INSERT INTO sessions(project_id,"+sessionColumns+") VALUES(?,?,?,?,?,?,?,?,?,?)", project, s.ID, s.ActorID, s.Name, s.Branch, s.AgentType, s.ContextID, s.PreviousSessionID, s.StartedAt.UTC().Format(time.RFC3339Nano), s.LastActivity.UTC().Format(time.RFC3339Nano))
 	return classify(e)
 }
+
+func (r sessionRepo) Touch(ctx context.Context, project, id string, now time.Time) error {
+	if e := r.check(); e != nil {
+		return e
+	}
+	result, e := r.tx.ExecContext(ctx, `UPDATE sessions SET last_activity=? WHERE project_id=? AND id=?`, now.UTC().Format(time.RFC3339Nano), project, id)
+	if e != nil {
+		return classify(e)
+	}
+	n, e := result.RowsAffected()
+	if e != nil {
+		return e
+	}
+	if n != 1 {
+		return domain.ErrNotFound
+	}
+	return nil
+}

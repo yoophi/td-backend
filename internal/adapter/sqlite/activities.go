@@ -12,15 +12,49 @@ import (
 )
 
 func (r workflowRepo) Activities(ctx context.Context, project, issue string, deleted bool) ([]port.Activity, error) {
+	return r.activityList(ctx, project, issue, deleted, 0, "", time.Time{})
+}
+func (r workflowRepo) Feed(ctx context.Context, project string, limit int) ([]port.Activity, error) {
+	if limit < 1 || limit > 1000 {
+		return nil, domain.ErrConflict
+	}
+	return r.activityList(ctx, project, "", false, limit, "", time.Time{})
+}
+func (r workflowRepo) RecentHandoffs(ctx context.Context, project string, since time.Time) ([]port.Activity, error) {
+	return r.activityList(ctx, project, "", false, 0, "handoff", since)
+}
+func (r workflowRepo) activityList(ctx context.Context, project, issue string, deleted bool, limit int, kind string, since time.Time) ([]port.Activity, error) {
 	if e := r.check(); e != nil {
 		return nil, e
 	}
-	q := `SELECT a.id,a.session_id,coalesce(a.work_session_id,''),a.operation_row_id,o.operation_id,actor.name,a.kind,a.message,coalesce(a.log_type,''),a.content_version,a.payload_version,a.payload_json,a.created_at,a.updated_at,coalesce(a.deleted_at,'') FROM activities a JOIN operations o ON a.operation_row_id=o.row_id JOIN actors actor ON o.actor_id=actor.id WHERE a.project_id=? AND a.issue_id=?`
+	q := `SELECT a.id,a.issue_id,a.session_id,coalesce(a.work_session_id,''),a.operation_row_id,o.operation_id,actor.name,a.kind,a.message,coalesce(a.log_type,''),a.content_version,a.payload_version,a.payload_json,a.created_at,a.updated_at,coalesce(a.deleted_at,'') FROM activities a JOIN operations o ON a.operation_row_id=o.row_id JOIN actors actor ON o.actor_id=actor.id WHERE a.project_id=?`
+	args := []any{project}
+	if issue != "" {
+		q += " AND a.issue_id=?"
+		args = append(args, issue)
+	} else {
+		q += " AND EXISTS (SELECT 1 FROM issues i WHERE i.project_id=a.project_id AND i.id=a.issue_id AND i.deleted_at IS NULL)"
+	}
+	if kind != "" {
+		q += " AND a.kind=?"
+		args = append(args, kind)
+	}
+	if !since.IsZero() {
+		q += " AND a.created_at>=?"
+		args = append(args, since.UTC().Format(time.RFC3339Nano))
+	}
 	if !deleted {
 		q += " AND a.deleted_at IS NULL"
 	}
-	q += " ORDER BY a.created_at,a.id"
-	rows, e := r.tx.QueryContext(ctx, q, project, issue)
+	if kind != "" {
+		q += " ORDER BY a.created_at DESC,a.id DESC"
+	} else if limit > 0 {
+		q += " ORDER BY a.created_at DESC,a.id DESC LIMIT ?"
+		args = append(args, limit)
+	} else {
+		q += " ORDER BY a.created_at,a.id"
+	}
+	rows, e := r.tx.QueryContext(ctx, q, args...)
 	if e != nil {
 		return nil, classify(e)
 	}
@@ -32,7 +66,7 @@ func (r workflowRepo) Activities(ctx context.Context, project, issue string, del
 		var payload []byte
 		var created, updated, removed string
 		a.IssueID = issue
-		if e = rows.Scan(&a.ID, &a.SessionID, &a.WorkSessionID, &a.OperationRowID, &a.OperationID, &a.Author, &a.Kind, &a.Message, &a.LogType, &a.ContentVersion, &version, &payload, &created, &updated, &removed); e != nil {
+		if e = rows.Scan(&a.ID, &a.IssueID, &a.SessionID, &a.WorkSessionID, &a.OperationRowID, &a.OperationID, &a.Author, &a.Kind, &a.Message, &a.LogType, &a.ContentVersion, &version, &payload, &created, &updated, &removed); e != nil {
 			return nil, e
 		}
 		if version != 1 {

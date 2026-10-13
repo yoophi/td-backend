@@ -64,6 +64,9 @@ func (r Runner) Run(ctx context.Context, c domain.Caller, m port.Mutation, kind 
 		if e != nil {
 			return e
 		}
+		if e = tx.SessionWrites().Touch(ctx, c.ProjectID, c.SessionID, now); e != nil {
+			return e
+		}
 		if _, e = tx.ProjectWrites().AdvanceChange(ctx, c.ProjectID); e != nil {
 			return e
 		}

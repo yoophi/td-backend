@@ -6,6 +6,8 @@ import (
 )
 
 type IssueDTO struct {
+	AvailableTransitions     *[]string             `json:"available_transitions,omitempty"`
+	ActiveReview             *domain.IssueReview   `json:"active_review,omitempty"`
 	Reviews                  *[]domain.IssueReview `json:"reviews,omitempty"`
 	Revision                 string                `json:"revision"`
 	ID                       string                `json:"id"`

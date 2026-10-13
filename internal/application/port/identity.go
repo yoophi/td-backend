@@ -22,5 +22,6 @@ type SessionReader interface {
 	List(context.Context, string) ([]domain.Session, error)
 }
 type SessionWriter interface {
+	Touch(context.Context, string, string, time.Time) error
 	Create(context.Context, string, domain.Session) error
 }

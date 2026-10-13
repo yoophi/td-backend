@@ -20,6 +20,8 @@ func (Codec) Encode(kind string, outcome any) (port.StoredReply, error) {
 	headers := map[string]string{"Content-Type": "application/json"}
 	switch kind {
 	case "project.create", "session.create":
+	case "session.heartbeat":
+		status = 200
 	case "focus.set":
 		result, ok := outcome.(focus.Result)
 		if !ok {

@@ -39,6 +39,8 @@ type WorkflowFacts struct {
 }
 type WorkflowReader interface {
 	Facts(context.Context, string) (WorkflowFacts, error)
+	Feed(context.Context, string, int) ([]Activity, error)
+	RecentHandoffs(context.Context, string, time.Time) ([]Activity, error)
 	History(context.Context, string, string) ([]domain.IssueSessionHistory, error)
 	ActiveReview(context.Context, string, string) (*Review, error)
 	LatestHandoff(context.Context, string, string) (*Activity, error)

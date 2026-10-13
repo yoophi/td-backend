@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/yoophi/td-backend/internal/application/board"
 	"github.com/yoophi/td-backend/internal/application/focus"
+	"github.com/yoophi/td-backend/internal/application/monitor"
 	"github.com/yoophi/td-backend/internal/application/note"
 	"github.com/yoophi/td-backend/internal/application/worksession"
 	"io"
@@ -23,6 +24,7 @@ import (
 )
 
 type Options struct {
+	Monitor      *monitor.Service
 	Focus        *focus.Service
 	Boards       *board.Service
 	Notes        *note.Service
@@ -134,11 +136,32 @@ func New(options ...Options) http.Handler {
 			Current  string           `json:"current_session_id"`
 		}{list, c.SessionID})
 	}))
+	mux.HandleFunc("POST /v1/projects/{project_id}/sessions/{session_id}/heartbeat", protect(func(w http.ResponseWriter, r *http.Request) {
+		body, e := io.ReadAll(http.MaxBytesReader(w, r.Body, 1))
+		if e != nil || len(body) != 0 {
+			writeError(w, invalid("body", "request body must be empty"))
+			return
+		}
+		m, e := mutation(r, struct{}{})
+		if e != nil {
+			writeError(w, e)
+			return
+		}
+		reply, e := opts.Projects.Heartbeat(r.Context(), caller(r), m, r.PathValue("session_id"))
+		if e != nil {
+			writeError(w, e)
+			return
+		}
+		writeReply(w, reply)
+	}))
 	if opts.Workflows != nil {
 		registerWorkflow(mux, opts.Workflows, protect, caller)
 	}
 	if opts.WorkSessions != nil {
 		registerWorkSessions(mux, opts.WorkSessions, protect, caller)
+	}
+	if opts.Monitor != nil {
+		registerMonitor(mux, opts.Monitor, protect, caller)
 	}
 	if opts.Focus != nil {
 		registerFocus(mux, opts.Focus, protect, caller)

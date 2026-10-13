@@ -211,3 +211,17 @@ WorkflowReader.Facts를 추가하여 live Issue의 참여 이력, active review 
 실제 workflow로 생성한 이력·handoff·record-only 승인에 대해 batch 결과와 기존 단건 reader 결과가 같은지 확인했습니다. 내용 수정에 따른 승인 무효화, soft-delete 후 facts 제외, 다른 project 격리와 callback 밖 접근 거부도 검증했습니다. 이 reader를 monitor 분류와 available_transitions에 연결하는 작업은 계속 진행합니다.
 
 Batch policy facts 추가 후 전체 `go test -race ./...`, `go vet ./...`, `git diff --check` 통과.
+
+### gh-11 — Monitor snapshot HTTP projection과 presence
+
+Monitor service/HTTP/DTO를 연결했습니다. 같은 read snapshot에서 project/token, TDQ facts, batch policy facts, Board 위치, Focus, 진행 중 Issue, 활동 feed, 최근 handoff 및 Session presence를 읽습니다. Issue별 추가 query는 없으며 모든 카드에 full DTO와 권한별 available_transitions를 제공합니다. 검색은 작업 목록에 적용하고 Focus와 전체 in-progress 목록은 유지합니다. Board query와 검색의 교집합을 기존 sparse 위치 순서로 분류합니다. 명시적 sort는 TDQ sort를 덮어쓰며 문자열을 연결하지 않고 검증된 AST sort를 교체합니다.
+
+승인 분류는 기존 reviewpolicy와 content/handoff basis를 사용합니다. trusted 구현자의 self-review 경로와 delegated의 pending-review, strict/balanced 분류를 유지합니다. 활성 approval을 가진 Issue에는 ready_to_close와 review summary를 제공하며 reader role에는 명시적인 빈 전이 배열을 반환합니다. 활동 feed는 최신 50개이고 최근 24시간 handoff는 별도 조회하여 feed cap과 관계없이 반환합니다.
+
+새 operation은 같은 writer transaction에서 소유 Session의 last_activity도 갱신합니다. POST sessions/{session_id}/heartbeat는 빈 body와 operation key를 사용하며 caller Session만 허용합니다. 새 heartbeat는 change_seq를 증가시키고 replay는 원래 timestamp/token을 유지합니다. Monitor presence는 최근 5분 Session과 현재 요청 Session을 표시합니다. CLI/serve heartbeat 호출은 이후 통합 작업에 포함됩니다.
+
+실제 HTTP+SQLite 검증: 네 가지 정책별 review 분류/approve 가능 여부, record-only approval 후 close, closed 포함 옵션, 의존 관계/Focus/full fields, reader 전이 배열, 검색·TDQ 오류·sort 검증, rework 후 review reset, Board 이동 순서와 검색 교집합, 활동 50개 제한과 동일 Issue의 다중 handoff를 확인했습니다. 별도 writer가 token 조회 후 Issue/Focus/change_seq를 변경해도 응답이 이전 snapshot을 유지합니다. Presence expiry·heartbeat replay/소유권·작업 쓰기 갱신과 last_activity UPDATE 실패의 전체 rollback/같은 key 복구도 검증했습니다.
+
+gh-11은 stats·labels·프로젝트 활동 조회 및 전체 조회 계약의 최종 점검이 남아 있습니다. 완료로 표시하지 않았습니다.
+
+Monitor/presence 통합 후 전체 `go test -race ./...`, `go vet ./...`, OpenAPI/GUI 계약 검사 및 `git diff --check` 통과.

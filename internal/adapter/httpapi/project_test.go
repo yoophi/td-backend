@@ -23,6 +23,7 @@ import (
 	"github.com/yoophi/td-backend/internal/application/board"
 	"github.com/yoophi/td-backend/internal/application/focus"
 	"github.com/yoophi/td-backend/internal/application/issue"
+	"github.com/yoophi/td-backend/internal/application/monitor"
 	"github.com/yoophi/td-backend/internal/application/note"
 	"github.com/yoophi/td-backend/internal/application/operation"
 	"github.com/yoophi/td-backend/internal/application/port"
@@ -62,6 +63,7 @@ func newHarness(t *testing.T) *harness {
 	h.server = httptest.NewServer(New(Options{
 		Projects: svc, Auth: auth,
 		Boards:       &board.Service{Reads: store, ID: ids.ID, Runner: runner},
+		Monitor:      &monitor.Service{Reads: store},
 		Notes:        &note.Service{Reads: store, ID: ids.ID, Runner: runner},
 		Focus:        &focus.Service{Reads: store, Runner: runner},
 		WorkSessions: &worksession.Service{Reads: store, ID: ids.ID, Runner: runner},
