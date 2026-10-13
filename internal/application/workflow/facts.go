@@ -53,6 +53,9 @@ func (f Facts) HasActiveApproval() bool {
 	if r.Record.Decision != reviewpolicy.DecisionApproved && r.Record.Decision != reviewpolicy.DecisionApprovedByParentCascade {
 		return false
 	}
+	if r.Record.Decision == reviewpolicy.DecisionApprovedByParentCascade {
+		return true
+	}
 	handoff := ""
 	if f.Handoff != nil {
 		if f.Handoff.ContentVersion != f.Issue.ContentVersion {
@@ -82,9 +85,22 @@ func (f Facts) Reviewer(self bool, attribution string) reviewpolicy.ReviewerElig
 }
 func (f Facts) Closer(self bool, attribution string) reviewpolicy.CloseEligibility {
 	any, implementation := f.involvement()
-	return reviewpolicy.EvaluateCloseEligibility(reviewpolicy.CloseEligibilityInput{
+	decision := reviewpolicy.EvaluateCloseEligibility(reviewpolicy.CloseEligibilityInput{
 		Mode: f.Mode, Issue: &f.Issue, SessionID: f.SessionID, SessionIsImplementer: f.Issue.ImplementerSession == f.SessionID, SessionIsCreator: f.Issue.CreatorSession == f.SessionID,
 		SessionIsReviewerOfRecord: f.Issue.ReviewerSession == f.SessionID, SessionIsReviewRequester: f.Issue.ReviewRequestedBySession == f.SessionID,
 		HasImplementationHistory: implementation, WasAnyInvolved: any, HasActiveApproval: f.HasActiveApproval(), SelfReviewAcknowledged: self, AttributedTo: attribution,
 	})
+	if f.Mode != reviewpolicy.ModeDelegated && decision.Allowed && decision.CreatorOpenBypass && f.HasImplementationHistory() {
+		return reviewpolicy.CloseEligibility{RejectionMessage: "implementation history requires review"}
+	}
+	return decision
+}
+
+func (f Facts) HasImplementationHistory() bool {
+	for _, h := range f.History {
+		if h.Action == domain.ActionSessionStarted || h.Action == domain.ActionSessionUnstarted {
+			return true
+		}
+	}
+	return false
 }

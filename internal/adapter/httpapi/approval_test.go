@@ -72,6 +72,10 @@ func TestTrustedApprovalAcknowledgementAndReopen(t *testing.T) {
 		t.Fatal("approval replay changed")
 	}
 	issue := detailReviews(t, h, path, session)
+	status, _, data = issueRequest(t, h, "GET", path+"/activity", session, "", "", "")
+	if status != 200 || !strings.Contains(string(data), `"log_type":"security"`) {
+		t.Fatal("self-review security audit missing", status, string(data))
+	}
 	if issue.Reviews == nil || len(*issue.Reviews) != 1 || !(*issue.Reviews)[0].SelfReview || issue.ReviewerSession == nil || *issue.ReviewerSession != session || issue.ClosedBySession == nil || *issue.ClosedBySession != session {
 		t.Fatalf("approval %+v", issue)
 	}
@@ -108,6 +112,10 @@ func TestDelegatedRecordOnlyAndCloseByImplementer(t *testing.T) {
 	status, _, data = issueRequest(t, h, "POST", path+"/close", implementer, key(t), `"r-4"`, `{}`)
 	if status != 400 {
 		t.Fatal(status, string(data))
+	}
+	status, _, data = issueRequest(t, h, "POST", path+"/close", implementer, key(t), `"r-4"`, `{"reason":"Use recorded approval","reviewed_by":"Unrecorded reviewer"}`)
+	if status != 400 {
+		t.Fatal("accepted ignored review attribution", status, string(data))
 	}
 	status, etag, data = issueRequest(t, h, "POST", path+"/close", implementer, key(t), `"r-4"`, `{"reason":"Closing with recorded approval"}`)
 	if status != 200 || etag != `"r-5"` {

@@ -31,8 +31,16 @@ func validateTransition(cmd *TransitionCommand, action string) error {
 	if cmd.SelfReview && cmd.Reason == "" {
 		return invalid("reason", "self review requires a reason")
 	}
-	if cmd.SelfCloseException != "" {
-		return invalid("self_close_exception", "unsupported self-close exception")
+	rawException := cmd.SelfCloseException
+	cmd.SelfCloseException = strings.TrimSpace(rawException)
+	if rawException != "" && cmd.SelfCloseException == "" {
+		return invalid("self_close_exception", "nonempty reason required")
+	}
+	if cmd.SelfCloseException != "" && action != "close" {
+		return invalid("self_close_exception", "only close supports this exception")
+	}
+	if cmd.SelfCloseException != "" && cmd.AdminReason != "" {
+		return invalid("self_close_exception", "choose either admin_reason or self_close_exception")
 	}
 	if cmd.RecordOnly && action != "approve" {
 		return invalid("record_only", "only approve supports record_only")
@@ -68,6 +76,9 @@ func (s *Service) finish(command operation.CommandContext, c domain.Caller, f Fa
 	ctx := tx.Context()
 	// Administrative close is an explicit owner action, distinct from force.
 	if cmd.AdminReason != "" {
+		if i.Status == domain.StatusInReview && !i.Minor {
+			return domain.ErrForbidden
+		}
 		role, e := tx.Access().Role(ctx, c.ProjectID, c.Actor.ID)
 		if e != nil {
 			return e
@@ -86,9 +97,27 @@ func (s *Service) finish(command operation.CommandContext, c domain.Caller, f Fa
 		if e = tx.WorkflowWrites().AppendActivity(ctx, c.ProjectID, a); e != nil {
 			return e
 		}
+	} else if cmd.SelfCloseException != "" {
+		if i.Status == domain.StatusInReview && !i.Minor {
+			return domain.ErrForbidden
+		}
+		if e := invalidate(command, c, i); e != nil {
+			return e
+		}
+		a, e := s.activity(command, c, *i, "log", "Self-close exception: "+cmd.SelfCloseException, nil)
+		if e != nil {
+			return e
+		}
+		a.LogType = domain.LogTypeSecurity
+		if e = tx.WorkflowWrites().AppendActivity(ctx, c.ProjectID, a); e != nil {
+			return e
+		}
 	} else if i.Status == domain.StatusInReview {
 		recorded := f.HasActiveApproval() && (f.Mode == reviewpolicy.ModeTrusted || f.Mode == reviewpolicy.ModeDelegated)
 		if recorded && !cmd.RecordOnly {
+			if cmd.ReviewedBy != "" {
+				return invalid("reviewed_by", "closing an existing approval cannot attribute a new review")
+			}
 			if f.ActiveReview.Record.ReviewerSession != c.SessionID && cmd.Reason == "" {
 				return invalid("reason", "closing another session's approval requires a reason")
 			}
@@ -108,15 +137,8 @@ func (s *Service) finish(command operation.CommandContext, c domain.Caller, f Fa
 			if decision.RequiresReason && cmd.Reason == "" {
 				return invalid("reason", "approval requires a reason")
 			}
-			if !cmd.RecordOnly {
-				closeDecision := f.Closer(cmd.SelfReview, cmd.ReviewedBy)
-				if !closeDecision.Allowed {
-					return domain.ErrForbidden
-				}
-				if closeDecision.RequiresReason && cmd.Reason == "" {
-					return invalid("reason", "close requires a reason")
-				}
-			}
+			// Direct approval authorizes reviewer + close together. In balanced
+			// mode this includes the creator exception, unlike standalone close.
 			if e := s.recordApproval(command, c, i, f.Handoff.ID, cmd.Reason, decision); e != nil {
 				return e
 			}
@@ -129,8 +151,8 @@ func (s *Service) finish(command operation.CommandContext, c domain.Caller, f Fa
 		if decision.RequiresReason && cmd.Reason == "" {
 			return invalid("reason", "close requires a reason")
 		}
-		// Implementation outside review must not bypass the recorded-review flow.
-		if !i.Minor && !decision.CreatorOpenBypass {
+		// Delegated mode requires an explicit exception for implemented work outside review.
+		if !i.Minor && f.Mode == reviewpolicy.ModeDelegated && f.HasImplementationHistory() {
 			return domain.ErrForbidden
 		}
 	}

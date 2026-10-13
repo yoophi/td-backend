@@ -38,6 +38,7 @@ type HandoffCommand struct {
 }
 type TransitionResult struct {
 	Issue                              domain.Issue
+	DescendantStatusUpdates            []domain.Issue
 	Noop                               bool
 	ParentStatusUpdates, AutoUnblocked []domain.Issue
 }
@@ -232,6 +233,9 @@ func (s *Service) Transition(ctx context.Context, c domain.Caller, m port.Mutati
 		if action == "block" {
 			a.LogType = domain.LogTypeBlocker
 		}
+		if (action == "approve" || action == "close") && cmd.SelfReview {
+			a.LogType = domain.LogTypeSecurity
+		}
 		if e = command.Tx.WorkflowWrites().AppendActivity(command.Tx.Context(), c.ProjectID, a); e != nil {
 			return nil, e
 		}
@@ -246,7 +250,13 @@ func (s *Service) Transition(ctx context.Context, c domain.Caller, m port.Mutati
 			}
 		}
 		if i.Status == domain.StatusClosed && before.Status != domain.StatusClosed {
-			result.ParentStatusUpdates, result.AutoUnblocked, e = s.cascadeClose(command, c, i)
+			if action == "approve" || (action == "close" && f.HasActiveApproval() && cmd.AdminReason == "" && cmd.SelfCloseException == "") {
+				result.DescendantStatusUpdates, e = s.cascadeApproval(command, c, i)
+				if e != nil {
+					return nil, e
+				}
+			}
+			result.ParentStatusUpdates, result.AutoUnblocked, e = s.cascadeClose(command, c, i, result.DescendantStatusUpdates...)
 			if e != nil {
 				return nil, e
 			}

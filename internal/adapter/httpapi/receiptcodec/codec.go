@@ -91,7 +91,10 @@ func (Codec) Encode(kind string, outcome any) (port.StoredReply, error) {
 		}
 		status = 200
 		headers["ETag"] = `"` + domain.Revision(result.Issue.Revision) + `"`
-		parents, unblocked := []IssueDTO{}, []IssueDTO{}
+		parents, unblocked, descendants := []IssueDTO{}, []IssueDTO{}, []IssueDTO{}
+		for _, i := range result.DescendantStatusUpdates {
+			descendants = append(descendants, IssueDTOFrom(i))
+		}
 		for _, i := range result.ParentStatusUpdates {
 			parents = append(parents, IssueDTOFrom(i))
 		}
@@ -99,11 +102,12 @@ func (Codec) Encode(kind string, outcome any) (port.StoredReply, error) {
 			unblocked = append(unblocked, IssueDTOFrom(i))
 		}
 		outcome = struct {
-			Issue     IssueDTO   `json:"issue"`
-			Noop      bool       `json:"noop"`
-			Parents   []IssueDTO `json:"parent_status_updates"`
-			Unblocked []IssueDTO `json:"auto_unblocked"`
-		}{IssueDTOFrom(result.Issue), result.Noop, parents, unblocked}
+			Issue       IssueDTO   `json:"issue"`
+			Noop        bool       `json:"noop"`
+			Parents     []IssueDTO `json:"parent_status_updates"`
+			Descendants []IssueDTO `json:"descendant_status_updates"`
+			Unblocked   []IssueDTO `json:"auto_unblocked"`
+		}{IssueDTOFrom(result.Issue), result.Noop, parents, descendants, unblocked}
 	case "workflow.handoff":
 		result, ok := outcome.(workflow.HandoffResult)
 		if !ok {

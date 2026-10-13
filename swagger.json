@@ -8399,6 +8399,12 @@
               "$ref": "#/components/schemas/IssueDTO"
             }
           },
+          "descendant_status_updates": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IssueDTO"
+            }
+          },
           "auto_unblocked": {
             "type": "array",
             "items": {

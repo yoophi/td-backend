@@ -5,14 +5,19 @@ import (
 	"fmt"
 
 	"github.com/yoophi/td-backend/internal/application/operation"
+	"github.com/yoophi/td-backend/internal/application/port"
 	"github.com/yoophi/td-backend/internal/domain"
+	"github.com/yoophi/td-backend/internal/domain/reviewpolicy"
 )
 
-func (s *Service) cascadeClose(command operation.CommandContext, c domain.Caller, closed domain.Issue) ([]domain.Issue, []domain.Issue, error) {
+func (s *Service) cascadeClose(command operation.CommandContext, c domain.Caller, closed domain.Issue, additionalClosed ...domain.Issue) ([]domain.Issue, []domain.Issue, error) {
 	parents, unblocked := []domain.Issue{}, []domain.Issue{}
 	tx := command.Tx
 	ctx := tx.Context()
 	closedIDs := []string{closed.ID}
+	for _, i := range additionalClosed {
+		closedIDs = append(closedIDs, i.ID)
+	}
 	seen := map[string]bool{closed.ID: true}
 	for id := closed.ParentID; id != ""; {
 		if seen[id] {
@@ -118,4 +123,78 @@ func (s *Service) cascadeLog(command operation.CommandContext, c domain.Caller, 
 		return e
 	}
 	return command.Tx.WorkflowWrites().AppendActivity(command.Tx.Context(), c.ProjectID, a)
+}
+
+// cascadeApproval records the named parent-approval exemption for descendants.
+// It traverses through blocked/closed nodes, but only closes open, in-progress
+// and in-review descendants, matching td monitor's approval behavior.
+func (s *Service) cascadeApproval(command operation.CommandContext, c domain.Caller, parent domain.Issue) ([]domain.Issue, error) {
+	tx := command.Tx
+	ctx := tx.Context()
+	all, e := tx.Issues().All(ctx, c.ProjectID, false)
+	if e != nil {
+		return nil, e
+	}
+	children := map[string][]domain.Issue{}
+	for _, i := range all {
+		children[i.ParentID] = append(children[i.ParentID], i)
+	}
+	queue := append([]domain.Issue{}, children[parent.ID]...)
+	seen := map[string]bool{parent.ID: true}
+	result := []domain.Issue{}
+	for len(queue) > 0 {
+		i := queue[0]
+		queue = queue[1:]
+		if seen[i.ID] {
+			return nil, domain.ErrConflict
+		}
+		seen[i.ID] = true
+		queue = append(queue, children[i.ID]...)
+		if i.Status != domain.StatusOpen && i.Status != domain.StatusInProgress && i.Status != domain.StatusInReview {
+			continue
+		}
+		before := i
+		i.Status = domain.StatusClosed
+		i.ClosedAt = &command.Now
+		i.ReviewedAt = &command.Now
+		i.ReviewerSession = c.SessionID
+		i.ClosedBySession = c.SessionID
+		if i.ImplementerSession == "" {
+			i.ImplementerSession = c.SessionID
+		}
+		if e = tx.IssueWrites().SupersedeReviews(ctx, c.ProjectID, i.ID, command.Now); e != nil {
+			return nil, e
+		}
+		handoff, e := tx.Workflow().LatestHandoff(ctx, c.ProjectID, i.ID)
+		if e != nil {
+			return nil, e
+		}
+		handoffID := ""
+		if handoff != nil {
+			handoffID = handoff.ID
+		}
+		id, e := s.ID("review")
+		if e != nil {
+			return nil, e
+		}
+		summary := "Cascaded approval from " + parent.ID
+		review := port.Review{Record: domain.IssueReview{ID: id, IssueID: i.ID, ReviewerSession: c.SessionID, Decision: reviewpolicy.DecisionApprovedByParentCascade, Summary: summary, RequestedBySession: i.ReviewRequestedBySession, CreatedAt: command.Now}, BasisContentVersion: i.ContentVersion, BasisHandoffID: handoffID, OperationRowID: command.RowID}
+		if e = tx.WorkflowWrites().SaveReview(ctx, c.ProjectID, review); e != nil {
+			return nil, e
+		}
+		if e = s.history(command, c, i, domain.ActionSessionReviewApproved); e != nil {
+			return nil, e
+		}
+		if e = s.history(command, c, i, domain.ActionSessionClosed); e != nil {
+			return nil, e
+		}
+		if e = s.cascadeLog(command, c, i, summary); e != nil {
+			return nil, e
+		}
+		if e = persist(command, c, before, &i); e != nil {
+			return nil, e
+		}
+		result = append(result, i)
+	}
+	return result, nil
 }

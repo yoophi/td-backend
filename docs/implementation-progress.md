@@ -107,3 +107,13 @@ POST comments/logs/activity, GET activity, DELETE comments를 구현했습니다
 댓글 삭제는 soft delete로 audit history를 보존합니다. Activity 변경 command의 aggregate snapshot version 3은 전체 history 대신 변경된 활동의 before/after delta를 담습니다. gh-12 Undo는 version 1/2뿐 아니라 이 delta 형식도 처리해야 합니다. 일반 workflow 활동 이력은 감사 기록으로 유지합니다. request JSON의 nested null도 거부하도록 strict decoder를 보완했습니다.
 
 HTTP+SQLite 검증: 댓글 replay, 댓글·로그의 승인 유지, soft-delete 이력 보존과 activity 조회 제외, 외부 UUIDv4 operation key, activity delta version, passive handoff의 비자동 review 제출과 승인 무효화, 다른/종료/없는 WorkSession 연결 거부, log type/message 및 nested null 검증. `go test -race ./...`, `go vet ./...` 통과. gh-8은 descendant approval cascade와 전체 policy/transaction acceptance 점검이 남아 있습니다.
+
+### gh-8 — 완료: descendant 승인과 정책·원자성 검증
+
+부모 승인 시 open/in_progress/in_review 자손을 `approved_by_parent_cascade` review와 함께 종료합니다. blocked/closed 자손은 상태를 유지하면서 그 아래 자손을 탐색합니다. 모든 descendant 변경·승인·history·effect·receipt는 한 transaction에 포함하고 `descendant_status_updates`로 반환합니다. 부모 승인 예외는 현재 content version에 결속하며 개별 handoff 없이도 유효합니다.
+
+기존 td의 close 정책과 맞춰 issue 전체 구현 이력이 있으면 creator-open 우회를 거부합니다. 명시적 self_close_exception은 사유와 security log를 남기며, admin_reason과 함께 non-minor in_review의 승인을 우회하지 못합니다. balanced 생성자 승인은 다른 Session의 구현을 사유와 함께 승인할 수 있도록 standalone close 자격의 중복 검사를 제거했습니다. 기존 승인으로 종료하면서 새 reviewed_by를 전달하는 요청은 잘못된 attribution을 남기지 않도록 거부합니다. 직접 self-review 승인도 security activity를 기록합니다.
+
+완료 기준 확인: 기존 policy 테스트와 실제 HTTP의 네 가지 mode/creator/minor/issue-wide history 검증이 통과했습니다. 기존 handoff/review basis 무효화, dependency cycle·project 격리, 부모 cascade rollback 테스트에 더해 descendant UPDATE 실패 시 부모 승인·자손 변경 전체 rollback, 같은 key 재시도 및 byte-exact receipt replay를 확인했습니다. `go test -race ./...`, `go vet ./...`, OpenAPI 구조/참조 및 GUI 필수 30 route 계약 검사, `git diff --check` 통과. 직접 코드와 upstream 승인·종료 경로를 대조한 self-review입니다.
+
+이로써 gh-8의 workflow/review/handoff/관계·활동 범위를 완료했습니다. Board/TDQ/Note/WorkSession/monitor projection/Undo/SSE 및 CLI·monitor·serve 통합은 gh-9~19에서 계속 진행합니다.
