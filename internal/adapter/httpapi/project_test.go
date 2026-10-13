@@ -27,6 +27,7 @@ import (
 	"github.com/yoophi/td-backend/internal/application/port"
 	"github.com/yoophi/td-backend/internal/application/project"
 	"github.com/yoophi/td-backend/internal/application/workflow"
+	"github.com/yoophi/td-backend/internal/application/worksession"
 	"github.com/yoophi/td-backend/internal/domain"
 )
 
@@ -59,10 +60,11 @@ func newHarness(t *testing.T) *harness {
 	runner := operation.Runner{Writes: store, Encoder: receiptcodec.Codec{}, ID: ids.ID, Now: time.Now}
 	h.server = httptest.NewServer(New(Options{
 		Projects: svc, Auth: auth,
-		Boards:    &board.Service{Reads: store, ID: ids.ID, Runner: runner},
-		Notes:     &note.Service{Reads: store, ID: ids.ID, Runner: runner},
-		Workflows: &workflow.Service{Reads: store, ID: ids.ID, Runner: runner},
-		Issues:    &issue.Service{Reads: store, ID: ids.ID, Runner: runner},
+		Boards:       &board.Service{Reads: store, ID: ids.ID, Runner: runner},
+		Notes:        &note.Service{Reads: store, ID: ids.ID, Runner: runner},
+		WorkSessions: &worksession.Service{Reads: store, ID: ids.ID, Runner: runner},
+		Workflows:    &workflow.Service{Reads: store, ID: ids.ID, Runner: runner},
+		Issues:       &issue.Service{Reads: store, ID: ids.ID, Runner: runner},
 	}))
 	t.Cleanup(func() { h.server.Close(); h.store.Close() })
 	return h

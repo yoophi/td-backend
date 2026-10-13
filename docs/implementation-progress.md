@@ -163,3 +163,13 @@ GET Board detail은 전체 Issue DTO와 sparse position을 반환합니다. befo
 Note CRUD와 pin/archive를 scoped ports·SQLite adapter·application service·HTTP route에 연결했습니다. 생성 이후 변경은 If-Match와 operation receipt를 사용하며 Note revision·project change_seq·version 1 before/after effect를 같은 transaction에 저장합니다. 삭제는 soft delete이며 목록은 archived를 포함하고 deleted는 제외합니다. pinned와 갱신 시각으로 정렬하고 빈 content 및 false 해제를 보존합니다.
 
 실제 HTTP+SQLite에서 생성/수정/삭제 byte-exact replay, missing/stale revision, pin 해제·archive·content clear, 다른 project/Session 거부, 삭제 이력과 escaped scope, receipt INSERT 실패의 전체 rollback 및 같은 key 재시도를 검증했습니다. project change_seq는 성공한 신규 operation마다 한 번 증가합니다. `go test -race ./...`, `go vet ./...`, OpenAPI/GUI 계약 검증이 통과했습니다. WorkSession과 Focus 내부 revision 통합은 gh-10의 남은 범위입니다.
+
+### gh-10 — WorkSession start/read/tag/end
+
+다중 Issue WorkSession의 scoped reader/writer와 HTTP API를 구현했습니다. 서버가 caller Session과 시작·종료 시각을 기록하고, 소유 Session만 태그 교체/종료를 수행할 수 있습니다. 종료 후 신규 변경은 거부하되 기존 operation key 재시도는 저장된 receipt를 그대로 반환합니다. local worktree 경로와 활성 WorkSession 선택은 서버에 저장하지 않습니다.
+
+태그는 같은 project의 살아 있는 Issue를 모두 확인한 후 원자적으로 교체합니다. 빈 배열은 clear이며 null/누락/빈 ID/중복 ID는 거부합니다. 유지하는 태그는 tagged_at을 보존합니다. WorkSession revision과 태그를 version 1 aggregate effect로 저장해 조건부 Undo에 사용합니다. 내부 revision은 HTTP DTO에 노출하지 않는 기존 계약을 유지합니다.
+
+실제 HTTP+SQLite 테스트에서 다른 Session 수정 거부·공유 조회, 다른 project Issue 혼합 요청의 전체 거부, receipt 실패 rollback과 같은 key 복구, 시작/태그/종료 replay, 종료 후 변경 거부, 빈 태그 및 change_seq를 검증했습니다. WorkSession revision과 전체 tag timestamps의 before/after snapshot, callback 밖 reader 거부도 확인했습니다. Focus 내부 revision과 session focus API는 gh-10/gh-11 연계 범위로 남아 있습니다.
+
+WorkSession 변경 후 전체 `go test -race ./...`, `go vet ./...`, OpenAPI/GUI 계약 검사, `git diff --check`가 통과했습니다.

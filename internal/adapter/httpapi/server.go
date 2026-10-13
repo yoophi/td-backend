@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/yoophi/td-backend/internal/application/board"
 	"github.com/yoophi/td-backend/internal/application/note"
+	"github.com/yoophi/td-backend/internal/application/worksession"
 	"io"
 	"net/http"
 	"reflect"
@@ -21,12 +22,13 @@ import (
 )
 
 type Options struct {
-	Boards    *board.Service
-	Notes     *note.Service
-	Workflows *workflow.Service
-	Issues    *issue.Service
-	Projects  *project.Service
-	Auth      port.Authenticator
+	Boards       *board.Service
+	Notes        *note.Service
+	WorkSessions *worksession.Service
+	Workflows    *workflow.Service
+	Issues       *issue.Service
+	Projects     *project.Service
+	Auth         port.Authenticator
 }
 type actorContextKey struct{}
 
@@ -132,6 +134,9 @@ func New(options ...Options) http.Handler {
 	}))
 	if opts.Workflows != nil {
 		registerWorkflow(mux, opts.Workflows, protect, caller)
+	}
+	if opts.WorkSessions != nil {
+		registerWorkSessions(mux, opts.WorkSessions, protect, caller)
 	}
 	if opts.Notes != nil {
 		registerNotes(mux, opts.Notes, protect, caller)

@@ -15,6 +15,7 @@ import (
 	"github.com/yoophi/td-backend/internal/application/operation"
 	"github.com/yoophi/td-backend/internal/application/project"
 	"github.com/yoophi/td-backend/internal/application/workflow"
+	"github.com/yoophi/td-backend/internal/application/worksession"
 	"github.com/yoophi/td-backend/internal/config"
 	"log/slog"
 	"net"
@@ -52,10 +53,11 @@ func run(ctx context.Context, args []string) error {
 	server := &http.Server{
 		Handler: httpapi.New(httpapi.Options{
 			Projects: projects, Auth: auth,
-			Boards:    &board.Service{Reads: store, ID: ids.ID, Runner: runner},
-			Notes:     &note.Service{Reads: store, ID: ids.ID, Runner: runner},
-			Workflows: &workflow.Service{Reads: store, ID: ids.ID, Runner: runner},
-			Issues:    &issue.Service{Reads: store, ID: ids.ID, Runner: runner},
+			Boards:       &board.Service{Reads: store, ID: ids.ID, Runner: runner},
+			Notes:        &note.Service{Reads: store, ID: ids.ID, Runner: runner},
+			WorkSessions: &worksession.Service{Reads: store, ID: ids.ID, Runner: runner},
+			Workflows:    &workflow.Service{Reads: store, ID: ids.ID, Runner: runner},
+			Issues:       &issue.Service{Reads: store, ID: ids.ID, Runner: runner},
 		}),
 		ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 30 * time.Second,
 		IdleTimeout: time.Minute, BaseContext: func(net.Listener) context.Context { return ctx },

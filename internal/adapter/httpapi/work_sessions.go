@@ -1,0 +1,100 @@
+package httpapi
+
+import (
+	"net/http"
+
+	"github.com/yoophi/td-backend/internal/adapter/httpapi/receiptcodec"
+	"github.com/yoophi/td-backend/internal/application/worksession"
+	"github.com/yoophi/td-backend/internal/domain"
+)
+
+func registerWorkSessions(mux *http.ServeMux, svc *worksession.Service, protect func(http.HandlerFunc) http.HandlerFunc, caller func(*http.Request) domain.Caller) {
+	const base = "/v1/projects/{project_id}/work-sessions"
+	mux.HandleFunc("GET "+base, protect(func(w http.ResponseWriter, r *http.Request) {
+		if len(r.URL.Query()) > 0 {
+			writeError(w, invalid("query", "unexpected query parameter"))
+			return
+		}
+		sessions, e := svc.List(r.Context(), caller(r))
+		if e != nil {
+			writeError(w, e)
+			return
+		}
+		data := []receiptcodec.WorkSessionDTO{}
+		for _, s := range sessions {
+			data = append(data, receiptcodec.WorkSessionDTOFrom(s))
+		}
+		writeSuccess(w, 200, struct {
+			WorkSessions []receiptcodec.WorkSessionDTO `json:"work_sessions"`
+		}{data})
+	}))
+	mux.HandleFunc("GET "+base+"/{work_session_id}", protect(func(w http.ResponseWriter, r *http.Request) {
+		if len(r.URL.Query()) > 0 {
+			writeError(w, invalid("query", "unexpected query parameter"))
+			return
+		}
+		s, e := svc.Get(r.Context(), caller(r), r.PathValue("work_session_id"))
+		if e != nil {
+			writeError(w, e)
+			return
+		}
+		writeSuccess(w, 200, struct {
+			WorkSession receiptcodec.WorkSessionDTO `json:"work_session"`
+			IssueIDs    []string                    `json:"issue_ids"`
+		}{receiptcodec.WorkSessionDTOFrom(s.WorkSession), receiptcodec.WorkSessionIssueIDs(s)})
+	}))
+	mux.HandleFunc("POST "+base, protect(func(w http.ResponseWriter, r *http.Request) {
+		var cmd worksession.StartCommand
+		if e := decode(w, r, &cmd); e != nil {
+			writeError(w, e)
+			return
+		}
+		m, e := mutation(r, cmd)
+		if e != nil {
+			writeError(w, e)
+			return
+		}
+		reply, e := svc.Start(r.Context(), caller(r), m, cmd)
+		if e != nil {
+			writeError(w, e)
+			return
+		}
+		writeReply(w, reply)
+	}))
+	mux.HandleFunc("PUT "+base+"/{work_session_id}/issues", protect(func(w http.ResponseWriter, r *http.Request) {
+		var cmd worksession.TagCommand
+		if e := decode(w, r, &cmd); e != nil {
+			writeError(w, e)
+			return
+		}
+		m, e := mutation(r, cmd)
+		if e != nil {
+			writeError(w, e)
+			return
+		}
+		reply, e := svc.Tag(r.Context(), caller(r), m, r.PathValue("work_session_id"), cmd)
+		if e != nil {
+			writeError(w, e)
+			return
+		}
+		writeReply(w, reply)
+	}))
+	mux.HandleFunc("POST "+base+"/{work_session_id}/end", protect(func(w http.ResponseWriter, r *http.Request) {
+		var cmd worksession.EndCommand
+		if e := decode(w, r, &cmd); e != nil {
+			writeError(w, e)
+			return
+		}
+		m, e := mutation(r, cmd)
+		if e != nil {
+			writeError(w, e)
+			return
+		}
+		reply, e := svc.End(r.Context(), caller(r), m, r.PathValue("work_session_id"), cmd)
+		if e != nil {
+			writeError(w, e)
+			return
+		}
+		writeReply(w, reply)
+	}))
+}

@@ -8,6 +8,7 @@ import (
 	"github.com/yoophi/td-backend/internal/application/note"
 	"github.com/yoophi/td-backend/internal/application/port"
 	"github.com/yoophi/td-backend/internal/application/workflow"
+	"github.com/yoophi/td-backend/internal/application/worksession"
 	"github.com/yoophi/td-backend/internal/domain"
 )
 
@@ -18,6 +19,23 @@ func (Codec) Encode(kind string, outcome any) (port.StoredReply, error) {
 	headers := map[string]string{"Content-Type": "application/json"}
 	switch kind {
 	case "project.create", "session.create":
+	case "work_session.start", "work_session.tag", "work_session.end":
+		result, ok := outcome.(worksession.Result)
+		if !ok {
+			return port.StoredReply{}, fmt.Errorf("invalid work session outcome")
+		}
+		if kind != "work_session.start" {
+			status = 200
+		}
+		outcome = struct {
+			WorkSession WorkSessionDTO `json:"work_session"`
+		}{WorkSessionDTOFrom(result.State.WorkSession)}
+		if kind == "work_session.tag" {
+			outcome = struct {
+				IssueIDs []string `json:"issue_ids"`
+			}{WorkSessionIssueIDs(result.State)}
+		}
+
 	case "note.create", "note.update", "note.delete":
 		result, ok := outcome.(note.Result)
 		if !ok {
