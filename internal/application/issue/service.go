@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"reflect"
 	"slices"
 	"strings"
 	"time"
@@ -15,6 +14,7 @@ import (
 	"github.com/yoophi/td-backend/internal/application/operation"
 	"github.com/yoophi/td-backend/internal/application/port"
 	"github.com/yoophi/td-backend/internal/domain"
+	"github.com/yoophi/td-backend/internal/domain/reviewpolicy"
 )
 
 type Service struct {
@@ -186,8 +186,15 @@ func (s *Service) Patch(ctx context.Context, c domain.Caller, m port.Mutation, i
 		if e = validateParent(command.Tx.Context(), command.Tx, c.ProjectID, *i); e != nil {
 			return e
 		}
-		// Conservatively invalidate review on any changed public content field.
-		if !reflect.DeepEqual(before, *i) {
+		// Use the same substantive-field policy as td; metadata edits preserve approval.
+		if reviewpolicy.IsReviewInvalidatingMutation(reviewpolicy.IssueMutation{
+			DescriptionChanged: before.Description != i.Description,
+			TitleChanged:       before.Title != i.Title,
+			TypeChanged:        before.Type != i.Type,
+			PriorityChanged:    before.Priority != i.Priority,
+			MinorChanged:       before.Minor != i.Minor,
+			ParentIDChanged:    before.ParentID != i.ParentID,
+		}) {
 			i.ContentVersion++
 			if e = command.Tx.IssueWrites().SupersedeReviews(command.Tx.Context(), c.ProjectID, id, command.Now); e != nil {
 				return e

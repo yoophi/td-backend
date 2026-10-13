@@ -45,3 +45,11 @@ Issue 목록은 전체 필드, total/limit/offset/has_more와 project change tok
 gh-7 acceptance 확인: 실제 HTTP에서 missing If-Match 428, stale 412, unknown field 400, key fingerprint 충돌 409, 반복 mutation 응답/ETag 동일성을 확인했습니다. 동일 key 동시 8건에서 effect 1회, receipt 저장 실패와 deferred FK commit 실패의 전체 rollback은 실제 SQLite runner 통합 테스트로 확인했습니다. 수정 응답을 버린 뒤 서버·DB pool을 재시작하고 같은 요청의 status/body/ETag가 원래 receipt와 정확히 일치하고 revision이 한 번만 증가했음을 추가 검증했습니다. `go test -race ./...`, `go vet ./...`, OpenAPI validator 통과.
 
 전체 구현 목표는 계속 진행 중입니다. Workflow/review parity, TDQ·Board·Note·WorkSession·Monitor·Undo·SSE, CLI/store/init 및 serve/GUI 연동은 별도 등록 task에 남아 있습니다.
+
+## gh-8 — 진행 중: review 정책 일치
+
+기존 td commit `c64d7873d8f555dd49875e34e6b39ae5257e2e0c`의 순수 reviewpolicy와 테스트를 domain 계층으로 이식했습니다. trusted/delegated/strict/balanced, minor, creator/implementer/history, attributed/self-review와 close-after-recorded-approval 판단을 기존 테스트 그대로 검증합니다. MIT attribution을 NOTICE에 추가했습니다.
+
+Issue PATCH의 임시 보수적 review 무효화를 기존 정책의 필드 기준으로 교체했습니다. title/description/type/priority/minor/parent 변경은 content version을 증가시키고 승인을 supersede합니다. labels/points/date/sprint/acceptance 변경은 현재 td와 동일하게 approval을 유지합니다. 실제 SQLite 테스트로 metadata 변경에서도 aggregate revision은 증가하면서 content version과 review attribution은 유지되고, substantive 변경에서는 review와 attribution이 무효화되는지 확인했습니다.
+
+검증: `go test -race ./...`, `go vet ./...`. gh-8은 진행 중이며 workflow/action API, review/handoff persistence와 cascade·관계 transaction 구현은 아직 남아 있습니다.
