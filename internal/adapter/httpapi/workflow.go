@@ -7,7 +7,7 @@ import (
 )
 
 func registerWorkflow(mux *http.ServeMux, svc *workflow.Service, protect func(http.HandlerFunc) http.HandlerFunc, caller func(*http.Request) domain.Caller) {
-	for _, action := range []string{"start", "unstart", "block", "unblock", "reopen", "review"} {
+	for _, action := range []string{"start", "unstart", "block", "unblock", "reopen", "review", "approve", "close", "reject"} {
 		mux.HandleFunc("POST /v1/projects/{project_id}/issues/{issue_id}/"+action, protect(func(w http.ResponseWriter, r *http.Request) {
 			var cmd workflow.TransitionCommand
 			if e := decode(w, r, &cmd); e != nil {

@@ -67,3 +67,11 @@ start/unstart/block/unblock/reopen/review와 handoff endpoint를 application wor
 Handoff는 review basis를 갱신하고 기존 승인을 supersede합니다. submit_review 기본 true일 때 in_progress Issue를 in_review로 함께 전환하며, false는 상태를 유지합니다. 모든 살아 있는 자식이 in_review/closed이면 부모를 재귀적으로 in_review로 변경하고 변경된 aggregate effect를 같은 transaction에 저장합니다.
 
 검증: 실제 HTTP+SQLite에서 start/handoff byte-exact replay, start/unstart history, handoff snapshot·빈 배열, passive handoff 후 review, force/invalid snapshot을 확인했습니다. 부모 UPDATE에 실패를 주입하여 자식 변경·handoff·receipt rollback 후 동일 key 재시도가 성공하는 것을 검증했습니다. `go test -race ./...`, `go vet ./...` 통과. approve/close/reject, explicit status, review record-only/close-after-approval, 관계·활동 명령과 close cascade는 gh-8의 남은 범위입니다.
+
+### gh-8 — 승인·종료·반려
+
+approve/close/reject를 observed workflow service에 연결했습니다. trusted self-review와 attribution, delegated 독립 reviewer, record-only 승인, 기록된 승인에 기반한 다른 Session의 close를 지원합니다. 다른 reviewer의 승인을 종료할 때 reason을 요구하고 reviewer와 closed_by를 분리하여 보존합니다. force는 review 자격을 우회하지 않습니다. admin_reason은 owner만 사용할 수 있으며 security log를 남깁니다. 재오픈/반려는 기존 review를 supersede하고 승인 attribution을 제거합니다.
+
+HTTP+SQLite에서 무기명 구현자 승인 거부, 잘못된 self-review/attribution 입력, delegated 우회 거부, record-only와 close attribution, 동일 승인 key 재생, 재오픈/반려 이력 보존을 검증했습니다. receipt INSERT 실패 시 review·closed state·참여 이력의 rollback과 동일 key 재시도를 검증했습니다. `go test -race ./...`, `go vet ./...` 통과.
+
+남은 gh-8 범위에는 close/approval cascade, review 전용 endpoint와 explicit status, relation/activity commands 및 전체 parity/원자성 검증이 포함됩니다. self_close_exception의 비어 있지 않은 값은 아직 명시적으로 거부합니다.

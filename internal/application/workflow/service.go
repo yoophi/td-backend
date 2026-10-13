@@ -16,9 +16,14 @@ type Service struct {
 	ID     func(string) (string, error)
 }
 type TransitionCommand struct {
-	Reason   string         `json:"reason"`
-	Force    bool           `json:"force"`
-	Snapshot *port.Snapshot `json:"snapshot"`
+	ReviewedBy         string         `json:"reviewed_by"`
+	SelfReview         bool           `json:"self_review"`
+	RecordOnly         bool           `json:"record_only"`
+	AdminReason        string         `json:"admin_reason"`
+	SelfCloseException string         `json:"self_close_exception"`
+	Reason             string         `json:"reason"`
+	Force              bool           `json:"force"`
+	Snapshot           *port.Snapshot `json:"snapshot"`
 }
 type HandoffCommand struct {
 	Done         []string       `json:"done"`
@@ -98,7 +103,7 @@ func (s *Service) activity(command operation.CommandContext, c domain.Caller, i 
 }
 func (s *Service) Transition(ctx context.Context, c domain.Caller, m port.Mutation, id, revision, action string, cmd TransitionCommand) (port.StoredReply, error) {
 	return s.Runner.Run(ctx, c, m, "workflow.transition", func(command operation.CommandContext) (any, error) {
-		if e := validateSnapshot(cmd.Snapshot); e != nil {
+		if e := validateTransition(&cmd, action); e != nil {
 			return nil, e
 		}
 		f, e := observed(command, c, id, revision)
@@ -110,6 +115,22 @@ func (s *Service) Transition(ctx context.Context, c domain.Caller, m port.Mutati
 		result := TransitionResult{ParentStatusUpdates: []domain.Issue{}, AutoUnblocked: []domain.Issue{}}
 		var history domain.IssueSessionAction
 		switch action {
+		case "approve", "close":
+			if e = s.finish(command, c, f, &i, action, cmd); e != nil {
+				return nil, e
+			}
+		case "reject":
+			if i.Status != domain.StatusInReview {
+				return nil, domain.ErrConflict
+			}
+			if e = invalidate(command, c, &i); e != nil {
+				return nil, e
+			}
+			i.Status = domain.StatusOpen
+			i.ImplementerSession = ""
+			i.ReviewRequestedBySession = ""
+			i.ClosedAt = nil
+			i.ClosedBySession = ""
 		case "start":
 			if i.Status == domain.StatusInProgress && i.ImplementerSession == c.SessionID {
 				result.Issue = i
