@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/yoophi/td-backend/internal/application/board"
 	"github.com/yoophi/td-backend/internal/application/issue"
+	"github.com/yoophi/td-backend/internal/application/note"
 	"github.com/yoophi/td-backend/internal/application/port"
 	"github.com/yoophi/td-backend/internal/application/workflow"
 	"github.com/yoophi/td-backend/internal/domain"
@@ -17,6 +18,24 @@ func (Codec) Encode(kind string, outcome any) (port.StoredReply, error) {
 	headers := map[string]string{"Content-Type": "application/json"}
 	switch kind {
 	case "project.create", "session.create":
+	case "note.create", "note.update", "note.delete":
+		result, ok := outcome.(note.Result)
+		if !ok {
+			return port.StoredReply{}, fmt.Errorf("invalid note outcome")
+		}
+		headers["ETag"] = `"` + domain.Revision(result.Note.Revision) + `"`
+		if kind != "note.create" {
+			status = 200
+		}
+		outcome = struct {
+			Note NoteDTO `json:"note"`
+		}{NoteDTOFrom(result.Note)}
+		if kind == "note.delete" {
+			outcome = struct {
+				Deleted bool `json:"deleted"`
+			}{true}
+		}
+
 	case "board.create", "board.update", "board.delete", "board.visit", "board.position", "board.unpin", "board.move":
 		result, ok := outcome.(board.Result)
 		if !ok {

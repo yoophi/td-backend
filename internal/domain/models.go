@@ -276,6 +276,7 @@ type Comment struct {
 
 // Note represents a freeform note (synced via sidecar)
 type Note struct {
+	Revision  int64      `json:"revision_number"`
 	ID        string     `json:"id"`
 	Title     string     `json:"title"`
 	Content   string     `json:"content"`

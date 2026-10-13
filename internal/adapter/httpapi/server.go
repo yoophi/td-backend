@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/yoophi/td-backend/internal/application/board"
+	"github.com/yoophi/td-backend/internal/application/note"
 	"io"
 	"net/http"
 	"reflect"
@@ -21,6 +22,7 @@ import (
 
 type Options struct {
 	Boards    *board.Service
+	Notes     *note.Service
 	Workflows *workflow.Service
 	Issues    *issue.Service
 	Projects  *project.Service
@@ -130,6 +132,9 @@ func New(options ...Options) http.Handler {
 	}))
 	if opts.Workflows != nil {
 		registerWorkflow(mux, opts.Workflows, protect, caller)
+	}
+	if opts.Notes != nil {
+		registerNotes(mux, opts.Notes, protect, caller)
 	}
 	if opts.Boards != nil {
 		registerBoards(mux, opts.Boards, protect, caller)

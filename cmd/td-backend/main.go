@@ -11,6 +11,7 @@ import (
 	"github.com/yoophi/td-backend/internal/adapter/tokenauth"
 	"github.com/yoophi/td-backend/internal/application/board"
 	"github.com/yoophi/td-backend/internal/application/issue"
+	"github.com/yoophi/td-backend/internal/application/note"
 	"github.com/yoophi/td-backend/internal/application/operation"
 	"github.com/yoophi/td-backend/internal/application/project"
 	"github.com/yoophi/td-backend/internal/application/workflow"
@@ -52,6 +53,7 @@ func run(ctx context.Context, args []string) error {
 		Handler: httpapi.New(httpapi.Options{
 			Projects: projects, Auth: auth,
 			Boards:    &board.Service{Reads: store, ID: ids.ID, Runner: runner},
+			Notes:     &note.Service{Reads: store, ID: ids.ID, Runner: runner},
 			Workflows: &workflow.Service{Reads: store, ID: ids.ID, Runner: runner},
 			Issues:    &issue.Service{Reads: store, ID: ids.ID, Runner: runner},
 		}),

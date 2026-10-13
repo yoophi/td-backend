@@ -22,6 +22,7 @@ import (
 	"github.com/yoophi/td-backend/internal/adapter/tokenauth"
 	"github.com/yoophi/td-backend/internal/application/board"
 	"github.com/yoophi/td-backend/internal/application/issue"
+	"github.com/yoophi/td-backend/internal/application/note"
 	"github.com/yoophi/td-backend/internal/application/operation"
 	"github.com/yoophi/td-backend/internal/application/port"
 	"github.com/yoophi/td-backend/internal/application/project"
@@ -59,6 +60,7 @@ func newHarness(t *testing.T) *harness {
 	h.server = httptest.NewServer(New(Options{
 		Projects: svc, Auth: auth,
 		Boards:    &board.Service{Reads: store, ID: ids.ID, Runner: runner},
+		Notes:     &note.Service{Reads: store, ID: ids.ID, Runner: runner},
 		Workflows: &workflow.Service{Reads: store, ID: ids.ID, Runner: runner},
 		Issues:    &issue.Service{Reads: store, ID: ids.ID, Runner: runner},
 	}))

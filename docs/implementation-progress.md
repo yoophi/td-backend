@@ -157,3 +157,9 @@ GET Board detail은 전체 Issue DTO와 sparse position을 반환합니다. befo
 완료 기준을 직접 검토했습니다. 기존 builtin 보호·slot/sparse key·If-Match·project 격리 검증에 더해 실제 HTTP+SQLite에서 상세 query 결과, before_id 순서, closed/hidden 카드, byte-exact replay, stale revision, 위치 INSERT 실패의 전체 rollback과 동일 key 복구를 확인했습니다. WAL 동시 writer 상황에서도 facts가 기존 read snapshot을 유지하고 callback 밖 접근을 거부합니다. 작은 카드 집합의 모든 위치 부분집합·이동 조합과 hidden key 극단값을 검사했습니다. `go test -race ./...`, `go vet ./...`, OpenAPI/GUI 계약 검사와 `git diff --check`가 통과했습니다.
 
 이로써 gh-9 범위를 완료했습니다. 일반 TDQ query/monitor API는 gh-11에서, Note·WorkSession은 gh-10에서 이어갑니다.
+
+## gh-10 — Note lifecycle API
+
+Note CRUD와 pin/archive를 scoped ports·SQLite adapter·application service·HTTP route에 연결했습니다. 생성 이후 변경은 If-Match와 operation receipt를 사용하며 Note revision·project change_seq·version 1 before/after effect를 같은 transaction에 저장합니다. 삭제는 soft delete이며 목록은 archived를 포함하고 deleted는 제외합니다. pinned와 갱신 시각으로 정렬하고 빈 content 및 false 해제를 보존합니다.
+
+실제 HTTP+SQLite에서 생성/수정/삭제 byte-exact replay, missing/stale revision, pin 해제·archive·content clear, 다른 project/Session 거부, 삭제 이력과 escaped scope, receipt INSERT 실패의 전체 rollback 및 같은 key 재시도를 검증했습니다. project change_seq는 성공한 신규 operation마다 한 번 증가합니다. `go test -race ./...`, `go vet ./...`, OpenAPI/GUI 계약 검증이 통과했습니다. WorkSession과 Focus 내부 revision 통합은 gh-10의 남은 범위입니다.
