@@ -37,7 +37,12 @@ type WorkflowFacts struct {
 	ActiveReviews  map[string]*Review
 	LatestHandoffs map[string]*Activity
 }
+type ActivityCounts struct {
+	Logs, Handoffs    int
+	MostActiveSession string
+}
 type WorkflowReader interface {
+	Counts(context.Context, string) (ActivityCounts, error)
 	Facts(context.Context, string) (WorkflowFacts, error)
 	Feed(context.Context, string, int) ([]Activity, error)
 	RecentHandoffs(context.Context, string, time.Time) ([]Activity, error)

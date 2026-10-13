@@ -225,3 +225,13 @@ Monitor service/HTTP/DTO를 연결했습니다. 같은 read snapshot에서 proje
 gh-11은 stats·labels·프로젝트 활동 조회 및 전체 조회 계약의 최종 점검이 남아 있습니다. 완료로 표시하지 않았습니다.
 
 Monitor/presence 통합 후 전체 `go test -race ./...`, `go vet ./...`, OpenAPI/GUI 계약 검사 및 `git diff --check` 통과.
+
+### gh-11 — Stats·labels 및 조회 범위 완료 점검
+
+Stats와 labels HTTP API를 추가했습니다. 살아 있는 Issue의 전체 필드로 total/status/type/priority/points/completion과 oldest-open/newest/last-closed를 계산합니다. 날짜 집계는 backend UTC의 오늘과 현재 시각부터 최근 7일입니다. 동률인 시각은 ID 오름차순으로 결정합니다. 활동 수와 most-active Session은 별도 한 번의 batch 집계이며, 기존 td와 같이 삭제된 Issue에 보존된 활동도 포함하고 삭제된 활동은 제외합니다. labels는 살아 있는 Issue에서 중복을 제거하여 정렬하며 workflows=[]/default_workflow=standard를 유지합니다.
+
+빈 프로젝트의 nullable highlights/0 집계, 날짜 경계, 삭제 제외, full fields, points 평균/completion, log/handoff count, labels 중복 및 archive 제외, project/Session 격리를 실제 HTTP+SQLite로 검증했습니다. 두 stats read 사이 별도 writer의 Issue 삭제와 log 추가를 주입했을 때 이전 Issue 수와 이전 activity 수가 일치하고 다음 요청만 새 snapshot을 보는 것을 확인했습니다. 전체 race/vet/OpenAPI 검증이 통과했습니다.
+
+gh-11 description과 API 설계를 재점검했습니다. activity 범위는 이미 구현된 Issue activity 조회와 Monitor의 project feed입니다. 별도 프로젝트 activity endpoint는 명세에 없으므로 추가할 필요가 없습니다. 앞선 진행 기록에서 project activity를 남은 별도 endpoint로 표현한 부분을 이 점검으로 정정합니다. list/detail/board/monitor/activity/stats/labels/query 경로와 full DTO/total/token snapshot, batch policy facts, 분류/전이, Focus/presence 및 TDQ 오류 검증이 모두 구현돼 있습니다. 완료한 runtime capabilities를 공개하며 Undo/SSE/changes는 아직 광고하지 않습니다.
+
+직접 완료 기준과 구현을 대조한 self-review입니다. 조건부 Undo·변경 이벤트와 CLI/monitor/serve/GUI 연결은 gh-12~19에 남아 있어 전체 구현 목표는 계속 진행합니다.

@@ -9,6 +9,7 @@ import (
 )
 
 func registerMonitor(mux *http.ServeMux, svc *monitor.Service, protect func(http.HandlerFunc) http.HandlerFunc, caller func(*http.Request) domain.Caller) {
+	registerStatistics(mux, svc, protect, caller)
 	mux.HandleFunc("GET /v1/projects/{project_id}/monitor", protect(func(w http.ResponseWriter, r *http.Request) {
 		opts := monitor.Options{}
 		for name, values := range r.URL.Query() {
