@@ -11,6 +11,7 @@ import (
 	"github.com/yoophi/td-backend/internal/application/monitor"
 	"github.com/yoophi/td-backend/internal/application/note"
 	"github.com/yoophi/td-backend/internal/application/operation"
+	"github.com/yoophi/td-backend/internal/application/undo"
 	"github.com/yoophi/td-backend/internal/application/worksession"
 	"io"
 	"net/http"
@@ -25,6 +26,7 @@ import (
 )
 
 type Options struct {
+	Undo         *undo.Service
 	Audit        *operation.AuditService
 	Monitor      *monitor.Service
 	Focus        *focus.Service
@@ -161,6 +163,9 @@ func New(options ...Options) http.Handler {
 	}
 	if opts.WorkSessions != nil {
 		registerWorkSessions(mux, opts.WorkSessions, protect, caller)
+	}
+	if opts.Undo != nil {
+		registerUndo(mux, opts.Undo, protect, caller)
 	}
 	if opts.Audit != nil {
 		registerAudit(mux, opts.Audit, protect, caller)

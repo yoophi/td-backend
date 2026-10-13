@@ -243,3 +243,13 @@ Operation 상세/list API를 application/SQLite/HTTP에 연결했습니다. 저�
 조건부 Undo가 사용할 project-scoped effect reader도 추가하여 versioned before/after와 after-revision을 읽습니다. 기존 actor/scope 기반 byte-exact replay lookup은 그대로 유지합니다. 실제 HTTP+SQLite에서 저장 응답, filter/page order, 생성 effect version/nullable before, project 격리, scope 수명, malformed/missing key, Actor key 모호성 거부와 기존 actor replay 유지를 검증했습니다. 전체 race/vet/OpenAPI 검사와 추가 collision regression의 race 검증을 수행했습니다.
 
 gh-12 남은 범위는 모든 affected aggregate의 after-revision 검사, Issue/Board/Note/Focus/WorkSession 원자적 Undo, 승인/history 보존과 지원하지 않는 operation 거부입니다. Undo capability는 아직 공개하지 않습니다.
+
+### gh-12 — 공유 aggregate 조건부 Undo와 migration
+
+Undo command runner와 HTTP endpoint를 연결하고 Board/Note/Focus/WorkSession inverse를 구현했습니다. 모든 effect의 현재 after-revision을 먼저 확인하며 하나라도 후속 변경이 있으면 409입니다. inverse·새 revision·effect·취소 사유/원본 연결·Session activity·change_seq·receipt는 같은 transaction에 저장합니다. 기존 Undo의 재-Undo와 Project/Session 생성 및 heartbeat Undo는 거부합니다. Focus/WorkSession은 소유 Session만 취소합니다.
+
+Board는 전체 sparse positions와 정의를 복원하고 Note 삭제는 이전 live 상태를 복원합니다. 생성 취소는 soft-delete이며 Focus의 생성 취소는 증가한 revision을 가진 clear row로 표현합니다. WorkSession 생성 취소를 위해 immutable 0001을 유지하고 0002 migration에 deleted_at과 operation_undos audit 연결을 추가했습니다. 삭제된 WorkSession은 일반 조회·활동 연결에서 제외하고 Undo용 reader만 보존 상태를 읽습니다.
+
+실제 HTTP/SQLite 검증: 필드 수정·삭제·생성·pin·Focus·tag/end inverse, 증가하는 revision, byte-exact replay와 원본 재취소 거부, 다른 Session의 개인 aggregate 거부, 사유 audit, mixed effect 중간 쓰기 실패의 전체 rollback 및 같은 key 복구, 뒤쪽 effect 후속 변경의 앞쪽 aggregate 무변경을 확인했습니다. 이전 state의 omitted nullable 값이 복원 대상에 남지 않도록 zero-state decode를 사용합니다. 실제 version 1 DB를 version 2로 올려 기존 WorkSession의 보존과 archive/activity 접근 제한을 검증했습니다. 전체 race/vet/OpenAPI 및 추가 Board restore/create 회귀 race 검증이 통과했습니다.
+
+현재 Issue effect version 1/2/3은 준비 단계에서 409로 거부합니다. Issue 필드·관계·파일·activity delta inverse와 다중 Issue cascade/approval/history/TDQ rework 연계는 gh-12의 남은 범위입니다. 전체 Undo capability는 아직 광고하지 않습니다.

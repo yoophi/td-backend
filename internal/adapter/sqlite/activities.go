@@ -124,7 +124,7 @@ func (r workflowRepo) WorkSessionAccess(ctx context.Context, project, id string)
 	if e := r.check(); e != nil {
 		return access, e
 	}
-	e := r.tx.QueryRowContext(ctx, `SELECT session_id,ended_at IS NOT NULL FROM work_sessions WHERE project_id=? AND id=?`, project, id).Scan(&access.SessionID, &access.Ended)
+	e := r.tx.QueryRowContext(ctx, `SELECT session_id,ended_at IS NOT NULL FROM work_sessions WHERE project_id=? AND id=? AND deleted_at IS NULL`, project, id).Scan(&access.SessionID, &access.Ended)
 	if errors.Is(e, sql.ErrNoRows) {
 		return access, domain.ErrNotFound
 	}

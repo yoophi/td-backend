@@ -173,6 +173,7 @@ type IssueDependency struct {
 
 // WorkSession represents a multi-issue work session
 type WorkSession struct {
+	DeletedAt    *time.Time `json:"deleted_at,omitempty"`
 	Revision     int64      `json:"revision_number"`
 	ID           string     `json:"id"`
 	Name         string     `json:"name"`

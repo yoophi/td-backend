@@ -8,6 +8,7 @@ import (
 	"github.com/yoophi/td-backend/internal/application/issue"
 	"github.com/yoophi/td-backend/internal/application/note"
 	"github.com/yoophi/td-backend/internal/application/port"
+	"github.com/yoophi/td-backend/internal/application/undo"
 	"github.com/yoophi/td-backend/internal/application/workflow"
 	"github.com/yoophi/td-backend/internal/application/worksession"
 	"github.com/yoophi/td-backend/internal/domain"
@@ -20,6 +21,21 @@ func (Codec) Encode(kind string, outcome any) (port.StoredReply, error) {
 	headers := map[string]string{"Content-Type": "application/json"}
 	switch kind {
 	case "project.create", "session.create":
+	case "operation.undo":
+		result, ok := outcome.(undo.Result)
+		if !ok {
+			return port.StoredReply{}, fmt.Errorf("invalid undo outcome")
+		}
+		status = 200
+		issues := []IssueDTO{}
+		for _, i := range result.AffectedIssues {
+			issues = append(issues, IssueDTOFrom(i))
+		}
+		outcome = struct {
+			Undone         bool       `json:"undone"`
+			AffectedIssues []IssueDTO `json:"affected_issues"`
+		}{true, issues}
+
 	case "session.heartbeat":
 		status = 200
 	case "focus.set":

@@ -36,6 +36,7 @@ type OperationReader interface {
 	Get(context.Context, string, string, string) (Receipt, error)
 }
 type OperationWriter interface {
+	RecordUndo(context.Context, string, string, string, string) error
 	Save(context.Context, Receipt) error
 	SaveEffect(context.Context, Effect) error
 }

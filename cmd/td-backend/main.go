@@ -16,6 +16,7 @@ import (
 	"github.com/yoophi/td-backend/internal/application/note"
 	"github.com/yoophi/td-backend/internal/application/operation"
 	"github.com/yoophi/td-backend/internal/application/project"
+	"github.com/yoophi/td-backend/internal/application/undo"
 	"github.com/yoophi/td-backend/internal/application/workflow"
 	"github.com/yoophi/td-backend/internal/application/worksession"
 	"github.com/yoophi/td-backend/internal/config"
@@ -56,6 +57,7 @@ func run(ctx context.Context, args []string) error {
 		Handler: httpapi.New(httpapi.Options{
 			Projects: projects, Auth: auth,
 			Boards:       &board.Service{Reads: store, ID: ids.ID, Runner: runner},
+			Undo:         &undo.Service{Runner: runner},
 			Audit:        &operation.AuditService{Reads: store},
 			Monitor:      &monitor.Service{Reads: store},
 			Notes:        &note.Service{Reads: store, ID: ids.ID, Runner: runner},

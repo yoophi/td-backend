@@ -81,3 +81,11 @@ func (r operationRepo) Effects(ctx context.Context, project, rowID string) ([]po
 	}
 	return out, rows.Err()
 }
+
+func (r operationRepo) RecordUndo(ctx context.Context, project, rowID, original, reason string) error {
+	if e := r.check(); e != nil {
+		return e
+	}
+	_, e := r.tx.ExecContext(ctx, `INSERT INTO operation_undos(project_id,operation_row_id,original_row_id,reason) VALUES(?,?,?,?)`, project, rowID, original, reason)
+	return classify(e)
+}

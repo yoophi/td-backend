@@ -7,6 +7,7 @@ import (
 )
 
 type WorkSessionReader interface {
+	GetArchived(context.Context, string, string) (domain.WorkSession, error)
 	Get(context.Context, string, string) (domain.WorkSession, error)
 	List(context.Context, string) ([]domain.WorkSession, error)
 	Tags(context.Context, string, string) ([]domain.WorkSessionIssue, error)
