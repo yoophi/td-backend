@@ -20,6 +20,17 @@ def request(props, required=(), **kw): return obj(props, required, additionalPro
 def nullable_ref(name): return {'type': 'object', 'allOf': [ref(name)], 'nullable': True}
 def envelope(data): return obj({'ok': boolean(enum=[True]), 'data': data}, ['ok', 'data'])
 
+S['ProjectID'] = string(
+    minLength=40, maxLength=40,
+    pattern=r'^prj_[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
+    example='prj_019a7a6e-8c00-7d42-9f23-8c5e7a1b6d90',
+    description='Immutable server-generated prj_ + lowercase canonical UUIDv7 (RFC 9562). Never derived from project name, Git remote or local path. Generated once on project creation; retry with same Idempotency-Key returns the same ID. Treat as opaque and authorize every access.')
+S['OperationKey'] = string(
+    minLength=36, maxLength=36,
+    pattern=r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
+    example='f47ac10b-58cc-4372-a567-0e02b2c3d479',
+    description='Client-generated lowercase canonical UUIDv4. One key per command intent, including td init; persist and reuse exactly the same key/request for retries. Scoped by Actor and Project, or Actor + @server for project creation.')
+
 S['Status'] = string(enum=['open', 'in_progress', 'blocked', 'in_review', 'closed'])
 S['IssueType'] = string(enum=['bug', 'feature', 'task', 'epic', 'chore'])
 S['Priority'] = string(enum=['P0', 'P1', 'P2', 'P3', 'P4'])
@@ -37,6 +48,7 @@ S['Activity']['properties']['log_type'] = ref('LogType')
 S['LogDTO']['properties']['type'] = ref('LogType')
 S['Project'] = obj({'id': string(), 'name': string(), 'repository': string(description='Canonical repository identity, optional; never use an absolute local path as shared identity.'), 'review_policy_mode': ref('ReviewPolicy'), 'title_min_length': integer(default=15, minimum=1), 'title_max_length': integer(default=200, minimum=1), 'created_at': string(format='date-time'), 'capabilities': array(string())}, ['id', 'name', 'review_policy_mode', 'title_min_length', 'title_max_length', 'capabilities'])
 S['ProjectCreate'] = request({'name': string(minLength=1), 'repository': string(), 'review_policy_mode': ref('ReviewPolicy'), 'title_min_length': integer(minimum=1, default=15), 'title_max_length': integer(minimum=1, default=200)}, ['name'])
+S['Project']['properties']['id'] = {'allOf':[ref('ProjectID')], 'readOnly':True}
 fields = {'title': string(minLength=1, description='Trimmed Unicode rune count is validated against project limits, default 15..200.'), 'description': string(), 'acceptance': string(), 'type': ref('IssueType'), 'priority': ref('Priority'), 'points': ref('Points'), 'labels': array(string()), 'parent_id': string(description='Empty string clears the parent.'), 'sprint': string(), 'minor': boolean(), 'due_date': string(description='YYYY-MM-DD or empty string to clear.', pattern=r'^(\d{4}-\d{2}-\d{2})?$'), 'defer_until': string(description='YYYY-MM-DD or empty string to clear.', pattern=r'^(\d{4}-\d{2}-\d{2})?$')}
 S['IssueCreate'] = request(dict(fields, created_branch=string(), depends_on=array(string())), ['title'], description='Server assigns ID, timestamps, creator session and open status. Default type task, priority P2, points 0. Dependencies are created atomically.')
 S['IssuePatch'] = request(fields, minProperties=1, description='Omitted fields stay unchanged; null is rejected. Clear strings with "" and labels with []. Status, attribution and timestamps require dedicated actions. Substantive edits supersede active review atomically.')
@@ -56,6 +68,7 @@ S['BoardCard'] = obj({'board_id': string(), 'position': integer(), 'has_position
 S['BoardDetail'] = obj({'board': ref('BoardDTO'), 'issues': array(ref('BoardCard'))}, ['board', 'issues'])
 S['SessionCreate'] = request({'name': string(), 'branch': string(), 'agent_type': string(), 'context_id': string(minLength=1), 'previous_session_id': string()}, ['context_id'], description='Assigns a project-scoped session ID to the authenticated actor. Local process/worktree state stays on client. Session IDs are attribution, never proof of reviewer independence.')
 S['Operation'] = obj({'id': string(), 'session_id': string(), 'method': string(), 'path': string(), 'status': string(enum=['committed']), 'response_status': integer(), 'response': obj({}, additionalProperties=True), 'created_at': string(format='date-time')}, ['id', 'session_id', 'method', 'path', 'status', 'response_status', 'response', 'created_at'], description='Durable receipt atomically committed with mutation. A GET 404 means no committed receipt was visible at that instant; an in-flight request may still commit.')
+S['Operation']['properties']['id'] = ref('OperationKey')
 S['Error'] = obj({'ok': boolean(enum=[False]), 'error': obj({'code': string(), 'message': string(), 'details': obj({'fields': array(obj({'field': string(), 'rule': string(), 'message': string(), 'value': {}, 'expected': {}}, ['field', 'rule', 'message'])), 'operation_id': string(), 'current_revision': string()}, additionalProperties=True)}, ['code', 'message'])}, ['ok', 'error'])
 S['MonitorResult'] = obj({'monitor': ref('MonitorDTO'), 'session_id': string(), 'change_token': string()}, ['monitor', 'session_id', 'change_token'])
 S['RefreshEvent'] = obj({'change_token': string(), 'timestamp': string(format='date-time')}, ['change_token', 'timestamp'])
@@ -63,7 +76,7 @@ S['PingEvent'] = obj({'change_token': string()}, ['change_token'])
 
 PARAMS = {
  'Session': {'name': 'X-TD-Session', 'in': 'header', 'required': True, 'schema': string(minLength=1), 'description': 'Registered project session owned by authenticated actor. td serve supplies its own web session; browser never needs this header.'},
- 'Operation': {'name': 'Idempotency-Key', 'in': 'header', 'required': True, 'schema': string(minLength=1, maxLength=200), 'description': 'Client generated UUID, retained for project lifetime. Scoped by actor and project, fingerprint includes session, method, path, body and If-Match. Same key+request returns original committed response before revision checks; different request returns 409.'},
+ 'Operation': {'name': 'Idempotency-Key', 'in': 'header', 'required': True, 'schema': ref('OperationKey'), 'description': 'Client generated UUIDv4, retained for project lifetime. Scoped by actor and project, fingerprint includes session, method, path, body and If-Match. Same key+request returns original committed response before revision checks; different request returns 409.'},
  'Revision': {'name': 'If-Match', 'in': 'header', 'required': True, 'schema': string(), 'example': '"r-42"', 'description': 'Exactly one strong ETag for the aggregate being mutated. Wildcard and weak tags rejected. Missing 428, stale 412. Check and mutation are atomic.'},
 }
 def p(name, schema, description='', **kw): return dict(name=name, schema=schema, description=description, **{'in':'query'}, **kw)
@@ -72,7 +85,7 @@ filters = [p('include_closed', boolean(default=False)), p('status', array(ref('S
 paths = {}
 def endpoint(path, method, opid, tag, summary, data, body=None, status=200, params=(), revision=False, source='proposed', description='', public=False):
     mut = method not in ['get', 'head']
-    parameters = [{'name': n, 'in': 'path', 'required': True, 'schema': string(minLength=1)} for n in re.findall(r'{(.*?)}', path)]
+    parameters = [{'name': n, 'in': 'path', 'required': True, 'schema': ref('ProjectID') if n=='project_id' else ref('OperationKey') if n=='operation_id' else string(minLength=1)} for n in re.findall(r'{(.*?)}', path)]
     if '{project_id}' in path: parameters.append({'$ref':'#/components/parameters/Session'})
     if mut: parameters.append({'$ref':'#/components/parameters/Operation'})
     if revision: parameters.append({'$ref':'#/components/parameters/Revision'})

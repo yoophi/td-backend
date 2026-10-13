@@ -26,6 +26,8 @@ GUI 연결은 기존 `/v1/*` 경로를 유지합니다. `td serve`가 저장된 
 
 ## 초기화와 요청 identity
 
+Project ID는 서버가 생성하는 `prj_` + 소문자 UUIDv7이며 40자입니다. init/operation key는 client가 생성하는 소문자 UUIDv4 36자입니다. 구체적인 생성·충돌·연결 규칙은 [ID 정책](id-policy.md)에 정의합니다. 최초 init에는 project-id가 필요 없고 기존 Project 연결에만 `--project-id`를 사용하도록 예정합니다.
+
 1. 최초 init에서 로컬에 init UUID를 기록합니다. `GET /healthz`, `GET /v1/capabilities`로 호환성을 확인합니다.
 2. `POST /v1/projects`에 init UUID를 `Idempotency-Key`로 보냅니다. 응답의 `data.project.id`를 config에 기록합니다. URL과 project ID가 이미 있으면 재사용합니다.
 3. 각 CLI context 및 serve web context는 `POST /v1/projects/{project_id}/sessions`로 등록합니다. 이 요청에는 아직 `X-TD-Session`이 필요하지 않습니다.

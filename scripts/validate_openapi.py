@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Validate specs and the td-gui facade's required protocol surfaces."""
 import json
+import re
 from pathlib import Path
 from openapi_spec_validator import validate
 
@@ -37,6 +38,16 @@ for path, methods in required.items():
 
 backend = docs['swagger.json']
 schemas = backend['components']['schemas']
+project_id = schemas['ProjectID']
+assert re.fullmatch(project_id['pattern'], project_id['example'])
+assert len(project_id['example']) == project_id['minLength'] == project_id['maxLength'] == 40
+for invalid in ['project-123', project_id['example'].upper(), project_id['example'][4:], project_id['example'].replace('-7d42-', '-4d42-')]:
+    assert not re.fullmatch(project_id['pattern'], invalid), invalid
+operation_key = schemas['OperationKey']
+assert re.fullmatch(operation_key['pattern'], operation_key['example'])
+assert len(operation_key['example']) == operation_key['minLength'] == operation_key['maxLength'] == 36
+assert schemas['Project']['properties']['id']['readOnly']
+assert 'id' not in schemas['ProjectCreate']['properties']
 assert 'status' not in schemas['IssuePatch']['properties']
 assert schemas['IssuePatch']['additionalProperties'] is False
 assert schemas['ReviewInput']['properties']['reviewed_by']['maxLength'] == 120
@@ -51,6 +62,11 @@ assert local['paths']['/health']['get']['security'] == []
 assert local['security'] == [{'BearerAuth': []}]
 for path, operations in backend['paths'].items():
     for method, operation in operations.items():
+        for parameter in operation.get('parameters', []):
+            if parameter.get('name') == 'project_id':
+                assert parameter['schema'] == {'$ref': '#/components/schemas/ProjectID'}
+            if parameter.get('name') == 'operation_id':
+                assert parameter['schema'] == {'$ref': '#/components/schemas/OperationKey'}
         success = [v for k, v in operation['responses'].items() if k.startswith('2')]
         for response in success:
             if 'application/json' in response.get('content', {}):

@@ -421,8 +421,7 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "minLength": 1
+              "$ref": "#/components/schemas/ProjectID"
             }
           },
           {
@@ -502,8 +501,7 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "minLength": 1
+              "$ref": "#/components/schemas/ProjectID"
             }
           },
           {
@@ -598,8 +596,7 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "minLength": 1
+              "$ref": "#/components/schemas/ProjectID"
             }
           },
           {
@@ -671,8 +668,7 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "minLength": 1
+              "$ref": "#/components/schemas/ProjectID"
             }
           },
           {
@@ -911,8 +907,7 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "minLength": 1
+              "$ref": "#/components/schemas/ProjectID"
             }
           },
           {
@@ -1005,8 +1000,7 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "minLength": 1
+              "$ref": "#/components/schemas/ProjectID"
             }
           },
           {
@@ -1127,8 +1121,7 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "minLength": 1
+              "$ref": "#/components/schemas/ProjectID"
             }
           },
           {
@@ -1245,8 +1238,7 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "minLength": 1
+              "$ref": "#/components/schemas/ProjectID"
             }
           },
           {
@@ -1355,8 +1347,7 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "minLength": 1
+              "$ref": "#/components/schemas/ProjectID"
             }
           },
           {
@@ -1457,8 +1448,7 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "minLength": 1
+              "$ref": "#/components/schemas/ProjectID"
             }
           },
           {
@@ -1569,8 +1559,7 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "minLength": 1
+              "$ref": "#/components/schemas/ProjectID"
             }
           },
           {
@@ -1681,8 +1670,7 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "minLength": 1
+              "$ref": "#/components/schemas/ProjectID"
             }
           },
           {
@@ -1793,8 +1781,7 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "minLength": 1
+              "$ref": "#/components/schemas/ProjectID"
             }
           },
           {
@@ -1905,8 +1892,7 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "minLength": 1
+              "$ref": "#/components/schemas/ProjectID"
             }
           },
           {
@@ -2017,8 +2003,7 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "minLength": 1
+              "$ref": "#/components/schemas/ProjectID"
             }
           },
           {
@@ -2129,8 +2114,7 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "minLength": 1
+              "$ref": "#/components/schemas/ProjectID"
             }
           },
           {
@@ -2241,8 +2225,7 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "minLength": 1
+              "$ref": "#/components/schemas/ProjectID"
             }
           },
           {
@@ -2353,8 +2336,7 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "minLength": 1
+              "$ref": "#/components/schemas/ProjectID"
             }
           },
           {
@@ -2477,8 +2459,7 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "minLength": 1
+              "$ref": "#/components/schemas/ProjectID"
             }
           },
           {
@@ -2589,8 +2570,7 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "minLength": 1
+              "$ref": "#/components/schemas/ProjectID"
             }
           },
           {
@@ -2725,8 +2705,7 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "minLength": 1
+              "$ref": "#/components/schemas/ProjectID"
             }
           },
           {
@@ -2855,8 +2834,7 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "minLength": 1
+              "$ref": "#/components/schemas/ProjectID"
             }
           },
           {
@@ -2974,8 +2952,7 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "minLength": 1
+              "$ref": "#/components/schemas/ProjectID"
             }
           },
           {
@@ -3102,8 +3079,7 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "minLength": 1
+              "$ref": "#/components/schemas/ProjectID"
             }
           },
           {
@@ -3211,8 +3187,7 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "minLength": 1
+              "$ref": "#/components/schemas/ProjectID"
             }
           },
           {
@@ -3313,8 +3288,7 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "minLength": 1
+              "$ref": "#/components/schemas/ProjectID"
             }
           },
           {
@@ -3433,8 +3407,7 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "minLength": 1
+              "$ref": "#/components/schemas/ProjectID"
             }
           },
           {
@@ -3563,8 +3536,7 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "minLength": 1
+              "$ref": "#/components/schemas/ProjectID"
             }
           },
           {
@@ -3682,8 +3654,7 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "minLength": 1
+              "$ref": "#/components/schemas/ProjectID"
             }
           },
           {
@@ -3826,8 +3797,7 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "minLength": 1
+              "$ref": "#/components/schemas/ProjectID"
             }
           },
           {
@@ -3905,8 +3875,7 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "minLength": 1
+              "$ref": "#/components/schemas/ProjectID"
             }
           },
           {
@@ -3999,8 +3968,7 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "minLength": 1
+              "$ref": "#/components/schemas/ProjectID"
             }
           },
           {
@@ -4110,8 +4078,7 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "minLength": 1
+              "$ref": "#/components/schemas/ProjectID"
             }
           },
           {
@@ -4228,8 +4195,7 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "minLength": 1
+              "$ref": "#/components/schemas/ProjectID"
             }
           },
           {
@@ -4338,8 +4304,7 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "minLength": 1
+              "$ref": "#/components/schemas/ProjectID"
             }
           },
           {
@@ -4472,8 +4437,7 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "minLength": 1
+              "$ref": "#/components/schemas/ProjectID"
             }
           },
           {
@@ -4609,8 +4573,7 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "minLength": 1
+              "$ref": "#/components/schemas/ProjectID"
             }
           },
           {
@@ -4728,8 +4691,7 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "minLength": 1
+              "$ref": "#/components/schemas/ProjectID"
             }
           },
           {
@@ -4816,8 +4778,7 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "minLength": 1
+              "$ref": "#/components/schemas/ProjectID"
             }
           },
           {
@@ -4945,8 +4906,7 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "minLength": 1
+              "$ref": "#/components/schemas/ProjectID"
             }
           },
           {
@@ -5025,8 +4985,7 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "minLength": 1
+              "$ref": "#/components/schemas/ProjectID"
             }
           },
           {
@@ -5121,8 +5080,7 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "minLength": 1
+              "$ref": "#/components/schemas/ProjectID"
             }
           },
           {
@@ -5217,8 +5175,7 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "minLength": 1
+              "$ref": "#/components/schemas/ProjectID"
             }
           },
           {
@@ -5298,8 +5255,7 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "minLength": 1
+              "$ref": "#/components/schemas/ProjectID"
             }
           },
           {
@@ -5365,8 +5321,7 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "minLength": 1
+              "$ref": "#/components/schemas/ProjectID"
             }
           },
           {
@@ -5456,8 +5411,7 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "minLength": 1
+              "$ref": "#/components/schemas/ProjectID"
             }
           },
           {
@@ -5549,8 +5503,7 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "minLength": 1
+              "$ref": "#/components/schemas/ProjectID"
             }
           },
           {
@@ -5628,8 +5581,7 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "minLength": 1
+              "$ref": "#/components/schemas/ProjectID"
             }
           },
           {
@@ -5747,8 +5699,7 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "minLength": 1
+              "$ref": "#/components/schemas/ProjectID"
             }
           },
           {
@@ -5849,8 +5800,7 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "minLength": 1
+              "$ref": "#/components/schemas/ProjectID"
             }
           },
           {
@@ -5984,8 +5934,7 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "minLength": 1
+              "$ref": "#/components/schemas/ProjectID"
             }
           },
           {
@@ -6083,8 +6032,7 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "minLength": 1
+              "$ref": "#/components/schemas/ProjectID"
             }
           },
           {
@@ -6162,8 +6110,7 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "minLength": 1
+              "$ref": "#/components/schemas/ProjectID"
             }
           },
           {
@@ -6276,8 +6223,7 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "minLength": 1
+              "$ref": "#/components/schemas/ProjectID"
             }
           },
           {
@@ -6369,8 +6315,7 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "minLength": 1
+              "$ref": "#/components/schemas/ProjectID"
             }
           },
           {
@@ -6484,8 +6429,7 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "minLength": 1
+              "$ref": "#/components/schemas/ProjectID"
             }
           },
           {
@@ -6593,8 +6537,7 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "minLength": 1
+              "$ref": "#/components/schemas/ProjectID"
             }
           },
           {
@@ -6602,8 +6545,7 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "minLength": 1
+              "$ref": "#/components/schemas/OperationKey"
             }
           },
           {
@@ -6686,8 +6628,7 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "minLength": 1
+              "$ref": "#/components/schemas/ProjectID"
             }
           },
           {
@@ -6811,8 +6752,7 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "minLength": 1
+              "$ref": "#/components/schemas/ProjectID"
             }
           },
           {
@@ -6820,8 +6760,7 @@
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "minLength": 1
+              "$ref": "#/components/schemas/OperationKey"
             }
           },
           {
@@ -8031,6 +7970,22 @@
         ],
         "x-source": "internal/models/activity.go#Activity"
       },
+      "ProjectID": {
+        "type": "string",
+        "minLength": 40,
+        "maxLength": 40,
+        "pattern": "^prj_[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+        "example": "prj_019a7a6e-8c00-7d42-9f23-8c5e7a1b6d90",
+        "description": "Immutable server-generated prj_ + lowercase canonical UUIDv7 (RFC 9562). Never derived from project name, Git remote or local path. Generated once on project creation; retry with same Idempotency-Key returns the same ID. Treat as opaque and authorize every access."
+      },
+      "OperationKey": {
+        "type": "string",
+        "minLength": 36,
+        "maxLength": 36,
+        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+        "example": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+        "description": "Client-generated lowercase canonical UUIDv4. One key per command intent, including td init; persist and reuse exactly the same key/request for retries. Scoped by Actor and Project, or Actor + @server for project creation."
+      },
       "Status": {
         "type": "string",
         "enum": [
@@ -8101,7 +8056,12 @@
         "type": "object",
         "properties": {
           "id": {
-            "type": "string"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ProjectID"
+              }
+            ],
+            "readOnly": true
           },
           "name": {
             "type": "string"
@@ -8731,7 +8691,7 @@
         "type": "object",
         "properties": {
           "id": {
-            "type": "string"
+            "$ref": "#/components/schemas/OperationKey"
           },
           "session_id": {
             "type": "string"
@@ -8902,11 +8862,9 @@
         "in": "header",
         "required": true,
         "schema": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 200
+          "$ref": "#/components/schemas/OperationKey"
         },
-        "description": "Client generated UUID, retained for project lifetime. Scoped by actor and project, fingerprint includes session, method, path, body and If-Match. Same key+request returns original committed response before revision checks; different request returns 409."
+        "description": "Client generated UUIDv4, retained for project lifetime. Scoped by actor and project, fingerprint includes session, method, path, body and If-Match. Same key+request returns original committed response before revision checks; different request returns 409."
       },
       "Revision": {
         "name": "If-Match",

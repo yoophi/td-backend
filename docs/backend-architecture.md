@@ -109,7 +109,7 @@ type ReceiptEncoder interface {
 
 `TxScope`는 transaction 밖에 보관할 수 없습니다. nested UnitOfWork, callback 자동 재실행, network I/O는 금지합니다. repository의 load는 항상 project ID를 받고, Save는 expected revision 조건과 RowsAffected를 검사합니다. read-side SQL은 조회용 facts를 batch로 반환하고 monitor module이 domain eligibility를 평가합니다. 조회 facts에는 board 후보, dependency 상태, session involvement, handoff/review basis가 포함되어 N+1 조회 없이 화면을 조합합니다.
 
-Clock/ID generator는 작은 함수 dependency로 주입합니다. 의미 없는 wrapper interface를 늘리지 않습니다. 시간은 UTC, ID는 server-generated 문자열, revision/change token은 opaque 문자열로 노출합니다. error는 domain/application의 typed code이며 HTTP adapter가 400/403/404/409/412/428/503으로 매핑합니다.
+Clock/ID generator는 작은 함수 dependency로 주입합니다. 의미 없는 wrapper interface를 늘리지 않습니다. 시간은 UTC, Project ID는 server-generated `prj_` + UUIDv7, operation key는 client-generated UUIDv4입니다. 상세 형식·충돌·재전송 규칙은 [ID 정책](id-policy.md)을 따릅니다. revision/change token은 opaque 문자열로 노출합니다. error는 domain/application의 typed code이며 HTTP adapter가 400/403/404/409/412/428/503으로 매핑합니다.
 
 `StoredReply`는 status code, 허용된 response headers(Content-Type/ETag), body bytes와 representation version을 담는 application의 기술적 receipt 값입니다. HTTP encoder가 Go outcome을 DTO와 envelope로 변환합니다. domain은 이 값을 알지 못하고 operation runner는 내용 해석 없이 저장·재사용합니다. 완전한 wire replay를 위해 인코딩은 commit 전에 수행하며 Date/request ID 같은 요청별 header는 저장하지 않습니다. 성공 receipt만 보존하고 validation/policy 실패는 rollback합니다. encoder가 실패해도 domain 변경은 commit되지 않습니다.
 

@@ -33,7 +33,7 @@ GitHub init은 remote/repository를 검증한 뒤 config만 기록하고 반환�
   "store": "td-backend",
   "backend": {
     "url": "http://localhost:7000",
-    "project_id": "project-example"
+    "project_id": "prj_019a7a6e-8c00-7d42-9f23-8c5e7a1b6d90"
   }
 }
 ```

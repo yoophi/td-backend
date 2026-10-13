@@ -1,41 +1,126 @@
 # td-backend
 
-`td`의 세 번째 store인 HTTP backend를 위한 **API 및 backend 설계**입니다. Go · SQLite · hexagonal architecture를 사용하며 `td cli`, `td monitor`, `td serve`를 거쳐 사용하는 `td-gui`를 대상으로 합니다. 서버 및 CLI adapter 구현은 아직 포함하지 않습니다.
+`td`의 세 번째 store로 사용할 HTTP backend를 설계하는 프로젝트입니다. **Go · SQLite · hexagonal architecture**를 사용하며 `td CLI`, `td monitor`, `td serve`를 통한 `td-gui` 연결을 대상으로 합니다.
 
-목표 사용법:
+현재는 API 명세·아키텍처·저장 schema와 구현 계획을 제공하는 **설계 단계**입니다. 서버 binary, Go application 코드와 td 원격 store adapter는 아직 구현하지 않았습니다. 아래 명령은 구현 후 제공할 목표 사용법입니다.
+
+## 목표 사용법
 
 ```sh
+# 신규 Project 생성: 서버가 ID를 발급하고 td가 저장
 td init --store=td-backend,http://localhost:7000
+
+# 다른 checkout에서 기존 Project 연결
+td init --store=td-backend,http://localhost:7000 \
+  --project-id=prj_019a7a6e-8c00-7d42-9f23-8c5e7a1b6d90
+
+# 동일한 원격 데이터 사용
 td create "Implement the remote store adapter"
 td monitor
 td serve
-# 같은 프로젝트에서 td-gui 실행
 td-gui
 ```
 
-현재 `td`는 위 init 문법을 지원하지 않습니다. 아래 명세에 맞춘 backend와 adapter 구현 후 사용할 수 있는 목표 흐름입니다.
+최초 init에는 Project ID가 필요 없습니다. 생성 응답의 ID를 `.todos/config.json`에 저장하고 이후 init에서는 재사용합니다. 기존 Project 연결에는 전체 ID를 지정합니다. 이미 저장된 연결과 다른 URL/ID가 주어지면 자동으로 덮어쓰지 않습니다. 현재 td는 `td-backend` store 및 `--project-id` 옵션을 지원하지 않습니다.
 
-| 파일 | 용도 |
+## 연결 구조
+
+```mermaid
+flowchart LR
+    CLI[td CLI] --> Client[td-backend store adapter]
+    Monitor[td monitor] --> Client
+    GUI[td-gui browser] --> Proxy[td-gui proxy]
+    Proxy --> Serve[local td serve facade]
+    Serve --> Client
+    Client --> Backend[Go HTTP backend]
+    Backend --> SQLite[(SQLite)]
+```
+
+GUI의 기존 `/v1/*` 경로와 응답 envelope는 로컬 `td serve`가 유지합니다. 원격 backend는 `/v1/projects/{project_id}/*`로 Project를 구분합니다. backend가 모든 Session에 동일한 작업 상태·history·board를 제공하고, focus는 각 Session에 귀속합니다. 로컬 serve token과 원격 backend token은 구분합니다.
+
+## Backend 설계
+
+| Module / adapter | 책임 |
 | --- | --- |
-| [swagger.json](swagger.json) | 원격 backend: 기본 URL `http://localhost:7000`, 49개 path / 63개 operation |
-| [api/td-serve.swagger.json](api/td-serve.swagger.json) | 로컬 serve facade: 기존 GUI의 `/v1/*`, `/health` 계약 유지 |
-| [docs/api-design.md](docs/api-design.md) | endpoint 그룹, 원자성, session, monitor 및 GUI 연결 설계 |
-| [docs/backend-architecture.md](docs/backend-architecture.md) | Go package 구성, ports/adapters, domain, SQLite transaction 및 운영 설계 |
-| [docs/sqlite-schema.sql](docs/sqlite-schema.sql) | 실행 검증 가능한 SQLite 저장 schema 설계 초안 |
+| Domain | workflow, review policy, review basis, 관계 불변 조건 |
+| Application | typed command/query, 권한, transaction, receipt·audit·undo 조합 |
+| Ports | UnitOfWork, ReadStore, repositories, Authenticator, ReceiptEncoder |
+| HTTP adapter | OpenAPI routes, DTO, headers, 오류, SSE |
+| SQLite adapter | SQL/migration, revision 검사, snapshot, 단일 파일 transaction |
+| Composition root | 설정과 adapter 조립, startup/shutdown |
+
+Domain과 application은 HTTP·SQLite 구현을 import하지 않습니다. 모든 Project를 하나의 SQLite 파일에 저장하고 project-scoped 복합 FK로 관계를 제한합니다. writer 1개와 제한된 reader pool을 사용하며 WAL, immediate write transaction, 일관된 read snapshot을 적용합니다.
+
+이슈 변경, review supersession, cascade, audit, operation receipt와 change token을 한 transaction으로 commit합니다. `If-Match`로 관측 revision을 검증하고 `Idempotency-Key`로 response 유실 뒤 중복 변경을 방지합니다. SSE는 `refresh`/`ping` 신호이며 client가 화면을 다시 조회합니다.
+
+## ID 규칙
+
+| 값 | 형식 | 생성 주체 |
+| --- | --- | --- |
+| Project ID | `prj_` + 소문자 UUIDv7, 40자 | backend |
+| Init / operation key | 소문자 UUIDv4, 36자 | td client / serve facade |
+| Internal operation row ID | 소문자 UUIDv7, 36자 | backend; 외부 ID와 별도 |
+
+Project ID는 생성 후 불변이며 이름·Git remote·경로에서 파생하지 않습니다. 같은 init key로 재시도하면 같은 Project ID를 반환합니다. 상세 pattern, collision 처리와 retry 규칙은 [ID 정책](docs/id-policy.md)을 따릅니다. Issue/Board/Session 등 기존 td resource ID의 형식을 변경하는 결정은 포함하지 않습니다.
+
+## 설계 산출물
+
+| 파일 | 내용 |
+| --- | --- |
+| [swagger.json](swagger.json) | 원격 backend, `http://localhost:7000`, 49개 path / 63개 operation |
+| [api/td-serve.swagger.json](api/td-serve.swagger.json) | 로컬 serve facade와 GUI 호환 HTTP 계약 |
+| [docs/api-design.md](docs/api-design.md) | endpoint, session, 원자성, monitor 및 GUI 연결 |
+| [docs/backend-architecture.md](docs/backend-architecture.md) | Go package, ports/adapters, domain, transaction, 운영·검증 |
+| [docs/sqlite-schema.sql](docs/sqlite-schema.sql) | 실행 검증 가능한 21개 테이블 DDL 초안; production migration 전 단계 |
+| [docs/id-policy.md](docs/id-policy.md) | Project ID와 init/operation key 생성 규칙 |
+| [docs/implementation-plan.md](docs/implementation-plan.md) | td feature/task, dependencies와 완료 기준 |
+| [docs/store-integration.md](docs/store-integration.md) | td 소스 분석과 CLI/monitor/serve adapter 수정 지점 |
 | [CONTEXT.md](CONTEXT.md) | 도메인 용어 |
-| [docs/store-integration.md](docs/store-integration.md) | 실제 td 소스 분석과 adapter 수정 지점 |
-| [api/model-schemas.json](api/model-schemas.json) | 분석한 commit의 Go DTO / domain model에서 추출한 schema snapshot |
+| [docs/adr/0001-single-sqlite-transaction-boundary.md](docs/adr/0001-single-sqlite-transaction-boundary.md) | 단일 SQLite 파일과 transaction 결정 |
+| [api/model-schemas.json](api/model-schemas.json) | 분석한 td commit의 model/DTO schema snapshot |
 
-JSON은 [OpenAPI 3.0.3](https://spec.openapis.org/oas/v3.0.3) 형식이며 Swagger Editor/UI에서 열 수 있습니다. `x-status: proposed`, operation의 `x-origin`, 모델의 `x-source`가 신규 설계와 원본 코드의 관계를 표시합니다. `adapted`는 기존 기능을 참고했다는 뜻이며 기존 서버와 wire-compatible하다는 뜻은 아닙니다.
+OpenAPI는 [3.0.3](https://spec.openapis.org/oas/v3.0.3) 형식입니다. `x-status: proposed`와 `x-origin`이 설계 상태 및 원본 코드와의 관계를 표시합니다. `adapted`는 기존 기능을 참고했다는 뜻이며 기존 서버의 모든 wire 동작과 동일하다는 뜻은 아닙니다.
 
-재생성 및 검증:
+## Swagger UI로 보기
+
+Docker가 설치되어 있으면 다음처럼 JSON을 읽기 전용으로 연결할 수 있습니다. [Swagger UI 공식 설치 문서](https://swagger.io/docs/open-source-tools/swagger-ui/usage/installation/).
 
 ```sh
-python3 scripts/generate_openapi.py
+docker run --rm \
+  -p 127.0.0.1:8080:8080 \
+  -v "$PWD/swagger.json:/spec/swagger.json:ro" \
+  -e SWAGGER_JSON=/spec/swagger.json \
+  docker.swagger.io/swaggerapi/swagger-ui
+```
+
+브라우저에서 `http://127.0.0.1:8080`을 엽니다. serve 명세는 volume의 파일을 `api/td-serve.swagger.json`으로 바꾸면 됩니다. 문서 탐색은 가능하지만 API 실행은 backend 구현 후 사용할 수 있습니다.
+
+## 명세 재생성 및 검증
+
+Python 3와 개발 의존성으로 검증합니다. 현재 단계에는 Go module이 없어 `go run`이나 `go test` 실행 대상은 없습니다.
+
+```sh
 python3 -m venv .venv
 .venv/bin/pip install -r requirements-dev.txt
+
+python3 scripts/generate_openapi.py
 .venv/bin/python scripts/validate_openapi.py
 python3 scripts/validate_sqlite_design.py
 ```
 
-검증은 OpenAPI 구조·참조와 GUI에서 필요한 route/응답 계약을 확인합니다. 실행 중인 서버에 대한 통합 검증은 서버와 adapter 구현 이후 별도로 필요합니다.
+OpenAPI 검사는 두 명세의 구조/참조, Project ID 규칙, GUI 필수 30개 route/method, envelope와 SSE 계약을 확인합니다. SQLite 검사는 실제 임시 DB에서 프로젝트 격리, enum/points, active review, receipt uniqueness, rollback, WAL snapshot, stale revision과 receipt 재조회 등을 확인합니다. Python SQLite 검증과 실제 Go driver/application의 통합 검증은 별도입니다.
+
+## 구현 계획과 범위
+
+[구현 계획](docs/implementation-plan.md)은 현재 이 저장소의 `gh-issue` store에 td feature/task로 등록합니다. 이는 앞으로 제공할 `td-backend` store와 별개인 현재 프로젝트의 작업 추적 설정입니다. td 기본 명령으로 조회합니다.
+
+```sh
+td list --all
+td ready
+td show <issue-id>
+td dep <issue-id>
+```
+
+구현은 backend 저장/identity → observed CRUD와 receipt → workflow/review/history/관계 → query/monitor/boards/notes/work sessions/undo/SSE → td CLI와 monitor/serve/GUI adapter 및 전체 통합 검증 순으로 진행합니다.
+
+기존 SQLite·GitHub 데이터의 import/export·migration과 기존 sync push/pull 프로토콜은 초기 API 범위에 포함하지 않습니다. local process/worktree path, git snapshot 수집, 개인 pane/filter/cursor와 active work-session 선택은 client가 관리합니다.
