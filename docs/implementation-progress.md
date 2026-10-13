@@ -280,3 +280,11 @@ CLI integration worktree에서 backend store parser/config/init과 durable idemp
 
 실행 예: `python3 scripts/check_cli_init.py --backend /absolute/path/td-backend --cli /absolute/path/td`.
 CLI의 전체 release-safe `make test`는 진행 중이며 gh-14는 아직 완료 처리하지 않았습니다. issue reader/workflow, monitor, serve/GUI 연동은 후속 gh-15~19 범위입니다.
+
+## CLI store 분기와 HTTP transport 기반
+
+CLI integration branch의 `d37f15c`는 기존 GitHub wrapper가 SQLite 이외 store를 전부 GitHub로 처리하던 분기를 수정합니다. GitHub는 명시적으로 선택했을 때만 진입하며, 아직 연결 전인 backend command는 기존 backend guard에서 오류를 반환합니다. backend list/show/query/search/start/close guard(race), 기존 SQLite check-handoff와 GitHub routing/offline query 회귀를 통과했습니다.
+
+`603b745`는 후속 gh-15/16의 HTTP 기반을 추가합니다. Issue DTO는 CLI model과 observed revision을 함께 유지합니다. List는 offset 페이지를 모두 수집하고 opaque change token이 달라지면 처음부터 재시작합니다(최대 3회). 페이지 metadata·중복 ID·잘못된 revision·진전 없는 페이지는 부분 성공 대신 오류로 반환합니다. 쓰기는 caller의 UUIDv4 key와 관찰한 revision의 strong If-Match를 보내며 자동 재시도하지 않습니다. status별 typed APIError와 keyed write의 응답 유실/손상 및 5xx 결과 불확실 오류를 구분합니다. 서버 오류 body/credential은 출력하지 않으며 redirect credential 전송을 차단합니다.
+
+pagination restart/불안정 snapshot/중복·빈 페이지·nullable DTO/cancel, If-Match/key 전달, stale·auth·conflict·store 오류, 불확실 write의 key 보존, redirect 회귀가 race 검사와 vet를 통과했습니다. caller Session의 장기 연결 및 OpenReader/CLI command dispatch는 아직 후속 작업입니다. 전체 CLI make test는 계속 실행 중이므로 gh-14/15를 완료로 처리하지 않았습니다.
