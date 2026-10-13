@@ -1,0 +1,1154 @@
+{
+  "IssueDTO": {
+    "type": "object",
+    "properties": {
+      "revision": {
+        "type": "string"
+      },
+      "id": {
+        "type": "string"
+      },
+      "title": {
+        "type": "string"
+      },
+      "description": {
+        "type": "string"
+      },
+      "status": {
+        "type": "string"
+      },
+      "type": {
+        "type": "string"
+      },
+      "priority": {
+        "type": "string"
+      },
+      "priority_label_warning": {
+        "type": "string"
+      },
+      "points": {
+        "type": "integer"
+      },
+      "labels": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "parent_id": {
+        "type": "string",
+        "nullable": true
+      },
+      "acceptance": {
+        "type": "string"
+      },
+      "sprint": {
+        "type": "string"
+      },
+      "implementer_session": {
+        "type": "string",
+        "nullable": true
+      },
+      "creator_session": {
+        "type": "string",
+        "nullable": true
+      },
+      "reviewer_session": {
+        "type": "string",
+        "nullable": true
+      },
+      "review_requested_by_session": {
+        "type": "string",
+        "nullable": true
+      },
+      "closed_by_session": {
+        "type": "string",
+        "nullable": true
+      },
+      "created_at": {
+        "type": "string",
+        "format": "date-time"
+      },
+      "updated_at": {
+        "type": "string",
+        "format": "date-time"
+      },
+      "reviewed_at": {
+        "type": "string",
+        "nullable": true,
+        "format": "date-time"
+      },
+      "closed_at": {
+        "type": "string",
+        "nullable": true,
+        "format": "date-time"
+      },
+      "deleted_at": {
+        "type": "string",
+        "nullable": true,
+        "format": "date-time"
+      },
+      "minor": {
+        "type": "boolean"
+      },
+      "created_branch": {
+        "type": "string",
+        "nullable": true
+      },
+      "defer_until": {
+        "type": "string",
+        "nullable": true,
+        "format": "date"
+      },
+      "due_date": {
+        "type": "string",
+        "nullable": true,
+        "format": "date"
+      },
+      "defer_count": {
+        "type": "integer"
+      },
+      "active_review": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/IssueReviewSummary"
+          }
+        ],
+        "nullable": true,
+        "type": "object"
+      },
+      "reviews": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/IssueReviewDTO"
+        }
+      },
+      "available_transitions": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "dependency_summary": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/DependencySummaryDTO"
+          }
+        ],
+        "nullable": true,
+        "type": "object"
+      }
+    },
+    "required": [
+      "revision",
+      "id",
+      "title",
+      "description",
+      "status",
+      "type",
+      "priority",
+      "points",
+      "labels",
+      "parent_id",
+      "acceptance",
+      "sprint",
+      "implementer_session",
+      "creator_session",
+      "reviewer_session",
+      "review_requested_by_session",
+      "closed_by_session",
+      "created_at",
+      "updated_at",
+      "reviewed_at",
+      "closed_at",
+      "deleted_at",
+      "minor",
+      "created_branch",
+      "defer_until",
+      "due_date",
+      "defer_count"
+    ],
+    "x-source": "internal/serve/response.go#IssueDTO"
+  },
+  "BlockerRefDTO": {
+    "type": "object",
+    "properties": {
+      "dep_id": {
+        "type": "string"
+      },
+      "issue_id": {
+        "type": "string"
+      },
+      "title": {
+        "type": "string"
+      },
+      "status": {
+        "type": "string"
+      },
+      "relation_type": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "dep_id",
+      "issue_id",
+      "title",
+      "status",
+      "relation_type"
+    ],
+    "x-source": "internal/serve/response.go#BlockerRefDTO"
+  },
+  "DependencySummaryDTO": {
+    "type": "object",
+    "properties": {
+      "blockers": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/BlockerRefDTO"
+        }
+      }
+    },
+    "required": [
+      "blockers"
+    ],
+    "x-source": "internal/serve/response.go#DependencySummaryDTO"
+  },
+  "LogDTO": {
+    "type": "object",
+    "properties": {
+      "historical": {
+        "type": "boolean"
+      },
+      "source_key": {
+        "type": "string"
+      },
+      "original_id": {
+        "type": "string"
+      },
+      "id": {
+        "type": "string"
+      },
+      "issue_id": {
+        "type": "string"
+      },
+      "session_id": {
+        "type": "string"
+      },
+      "work_session_id": {
+        "type": "string"
+      },
+      "message": {
+        "type": "string"
+      },
+      "type": {
+        "type": "string"
+      },
+      "timestamp": {
+        "type": "string",
+        "format": "date-time"
+      }
+    },
+    "required": [
+      "id",
+      "issue_id",
+      "session_id",
+      "work_session_id",
+      "message",
+      "type",
+      "timestamp"
+    ],
+    "x-source": "internal/serve/response.go#LogDTO"
+  },
+  "CommentDTO": {
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "string"
+      },
+      "issue_id": {
+        "type": "string"
+      },
+      "session_id": {
+        "type": "string"
+      },
+      "text": {
+        "type": "string"
+      },
+      "created_at": {
+        "type": "string",
+        "format": "date-time"
+      }
+    },
+    "required": [
+      "id",
+      "issue_id",
+      "session_id",
+      "text",
+      "created_at"
+    ],
+    "x-source": "internal/serve/response.go#CommentDTO"
+  },
+  "HandoffDTO": {
+    "type": "object",
+    "properties": {
+      "historical": {
+        "type": "boolean"
+      },
+      "source_key": {
+        "type": "string"
+      },
+      "original_id": {
+        "type": "string"
+      },
+      "id": {
+        "type": "string"
+      },
+      "issue_id": {
+        "type": "string"
+      },
+      "session_id": {
+        "type": "string"
+      },
+      "done": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "remaining": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "decisions": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "uncertain": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "timestamp": {
+        "type": "string",
+        "format": "date-time"
+      }
+    },
+    "required": [
+      "id",
+      "issue_id",
+      "session_id",
+      "done",
+      "remaining",
+      "decisions",
+      "uncertain",
+      "timestamp"
+    ],
+    "x-source": "internal/serve/response.go#HandoffDTO"
+  },
+  "DependencyDTO": {
+    "type": "object",
+    "properties": {
+      "dep_id": {
+        "type": "string"
+      },
+      "issue_id": {
+        "type": "string"
+      },
+      "depends_on_id": {
+        "type": "string"
+      },
+      "relation_type": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "dep_id",
+      "issue_id",
+      "depends_on_id",
+      "relation_type"
+    ],
+    "x-source": "internal/serve/response.go#DependencyDTO"
+  },
+  "BoardDTO": {
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "string"
+      },
+      "name": {
+        "type": "string"
+      },
+      "query": {
+        "type": "string"
+      },
+      "is_builtin": {
+        "type": "boolean"
+      },
+      "view_mode": {
+        "type": "string"
+      },
+      "last_viewed_at": {
+        "type": "string",
+        "nullable": true,
+        "format": "date-time"
+      },
+      "created_at": {
+        "type": "string",
+        "format": "date-time"
+      },
+      "updated_at": {
+        "type": "string",
+        "format": "date-time"
+      }
+    },
+    "required": [
+      "id",
+      "name",
+      "query",
+      "is_builtin",
+      "view_mode",
+      "last_viewed_at",
+      "created_at",
+      "updated_at"
+    ],
+    "x-source": "internal/serve/response.go#BoardDTO"
+  },
+  "SessionDTO": {
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "string"
+      },
+      "name": {
+        "type": "string"
+      },
+      "branch": {
+        "type": "string"
+      },
+      "agent_type": {
+        "type": "string"
+      },
+      "agent_pid": {
+        "type": "integer"
+      },
+      "context_id": {
+        "type": "string"
+      },
+      "previous_session_id": {
+        "type": "string",
+        "nullable": true
+      },
+      "started_at": {
+        "type": "string",
+        "format": "date-time"
+      },
+      "last_activity": {
+        "type": "string",
+        "format": "date-time"
+      }
+    },
+    "required": [
+      "id",
+      "name",
+      "branch",
+      "agent_type",
+      "agent_pid",
+      "context_id",
+      "previous_session_id",
+      "started_at",
+      "last_activity"
+    ],
+    "x-source": "internal/serve/response.go#SessionDTO"
+  },
+  "ActivityItemDTO": {
+    "type": "object",
+    "properties": {
+      "timestamp": {
+        "type": "string",
+        "format": "date-time"
+      },
+      "session_id": {
+        "type": "string"
+      },
+      "type": {
+        "type": "string"
+      },
+      "issue_id": {
+        "type": "string"
+      },
+      "issue_title": {
+        "type": "string"
+      },
+      "message": {
+        "type": "string"
+      },
+      "log_type": {
+        "type": "string"
+      },
+      "action": {
+        "type": "string"
+      },
+      "entity_id": {
+        "type": "string"
+      },
+      "entity_type": {
+        "type": "string"
+      },
+      "previous_data": {
+        "type": "string"
+      },
+      "new_data": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "timestamp",
+      "session_id",
+      "type",
+      "issue_id",
+      "issue_title",
+      "message",
+      "log_type",
+      "action",
+      "entity_id",
+      "entity_type",
+      "previous_data",
+      "new_data"
+    ],
+    "x-source": "internal/serve/response.go#ActivityItemDTO"
+  },
+  "MonitorDTO": {
+    "type": "object",
+    "properties": {
+      "full_reconciled_at": {
+        "type": "string"
+      },
+      "observation_mode": {
+        "type": "string"
+      },
+      "focused_issue": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/IssueDTO"
+          }
+        ],
+        "nullable": true,
+        "type": "object"
+      },
+      "in_progress": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/IssueDTO"
+        }
+      },
+      "activity": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/ActivityItemDTO"
+        }
+      },
+      "task_list": {
+        "$ref": "#/components/schemas/TaskListDTO"
+      },
+      "recent_handoffs": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/RecentHandoffDTO"
+        }
+      },
+      "active_sessions": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "timestamp": {
+        "type": "string",
+        "format": "date-time"
+      }
+    },
+    "required": [
+      "focused_issue",
+      "in_progress",
+      "activity",
+      "task_list",
+      "recent_handoffs",
+      "active_sessions",
+      "timestamp"
+    ],
+    "x-source": "internal/serve/response.go#MonitorDTO"
+  },
+  "TaskListDTO": {
+    "type": "object",
+    "properties": {
+      "review_verification_required": {
+        "type": "boolean"
+      },
+      "reviewable": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/IssueDTO"
+        }
+      },
+      "needs_rework": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/IssueDTO"
+        }
+      },
+      "in_progress": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/IssueDTO"
+        }
+      },
+      "ready": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/IssueDTO"
+        }
+      },
+      "pending_review": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/IssueDTO"
+        }
+      },
+      "ready_to_close": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/IssueDTO"
+        }
+      },
+      "pending_other": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/IssueDTO"
+        }
+      },
+      "blocked": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/IssueDTO"
+        }
+      },
+      "closed": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/IssueDTO"
+        }
+      }
+    },
+    "required": [
+      "review_verification_required",
+      "reviewable",
+      "needs_rework",
+      "in_progress",
+      "ready",
+      "pending_review",
+      "ready_to_close",
+      "pending_other",
+      "blocked",
+      "closed"
+    ],
+    "x-source": "internal/serve/response.go#TaskListDTO"
+  },
+  "RecentHandoffDTO": {
+    "type": "object",
+    "properties": {
+      "issue_id": {
+        "type": "string"
+      },
+      "session_id": {
+        "type": "string"
+      },
+      "timestamp": {
+        "type": "string",
+        "format": "date-time"
+      }
+    },
+    "required": [
+      "issue_id",
+      "session_id",
+      "timestamp"
+    ],
+    "x-source": "internal/serve/response.go#RecentHandoffDTO"
+  },
+  "StatsDTO": {
+    "type": "object",
+    "properties": {
+      "total": {
+        "type": "integer"
+      },
+      "by_status": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "integer"
+        }
+      },
+      "by_type": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "integer"
+        }
+      },
+      "by_priority": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "integer"
+        }
+      },
+      "oldest_open": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/IssueDTO"
+          }
+        ],
+        "nullable": true,
+        "type": "object"
+      },
+      "newest_task": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/IssueDTO"
+          }
+        ],
+        "nullable": true,
+        "type": "object"
+      },
+      "last_closed": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/IssueDTO"
+          }
+        ],
+        "nullable": true,
+        "type": "object"
+      },
+      "created_today": {
+        "type": "integer"
+      },
+      "created_this_week": {
+        "type": "integer"
+      },
+      "total_points": {
+        "type": "integer"
+      },
+      "avg_points_per_task": {
+        "type": "number"
+      },
+      "completion_rate": {
+        "type": "number"
+      },
+      "total_logs": {
+        "type": "integer"
+      },
+      "total_handoffs": {
+        "type": "integer"
+      },
+      "most_active_session": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "total",
+      "by_status",
+      "by_type",
+      "by_priority",
+      "oldest_open",
+      "newest_task",
+      "last_closed",
+      "created_today",
+      "created_this_week",
+      "total_points",
+      "avg_points_per_task",
+      "completion_rate",
+      "total_logs",
+      "total_handoffs",
+      "most_active_session"
+    ],
+    "x-source": "internal/serve/response.go#StatsDTO"
+  },
+  "IssueReviewSummary": {
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "string"
+      },
+      "decision": {
+        "type": "string"
+      },
+      "reviewer_session": {
+        "type": "string"
+      },
+      "requested_by_session": {
+        "type": "string"
+      },
+      "summary": {
+        "type": "string"
+      },
+      "created_at": {
+        "type": "string",
+        "format": "date-time"
+      },
+      "self_review": {
+        "type": "boolean"
+      },
+      "reviewed_by": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "id",
+      "decision",
+      "reviewer_session",
+      "created_at",
+      "self_review"
+    ],
+    "x-source": "internal/serve/handlers_reviews.go#IssueReviewSummary"
+  },
+  "IssueReviewDTO": {
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "string"
+      },
+      "issue_id": {
+        "type": "string"
+      },
+      "reviewer_session": {
+        "type": "string"
+      },
+      "decision": {
+        "type": "string"
+      },
+      "summary": {
+        "type": "string"
+      },
+      "requested_by_session": {
+        "type": "string"
+      },
+      "created_at": {
+        "type": "string",
+        "format": "date-time"
+      },
+      "superseded_at": {
+        "type": "string",
+        "format": "date-time",
+        "nullable": true
+      },
+      "self_review": {
+        "type": "boolean"
+      },
+      "reviewed_by": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "id",
+      "issue_id",
+      "reviewer_session",
+      "decision",
+      "created_at",
+      "self_review"
+    ],
+    "x-source": "internal/serve/handlers_reviews.go#IssueReviewDTO"
+  },
+  "GitSnapshot": {
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "string"
+      },
+      "issue_id": {
+        "type": "string"
+      },
+      "event": {
+        "type": "string"
+      },
+      "commit_sha": {
+        "type": "string"
+      },
+      "branch": {
+        "type": "string"
+      },
+      "dirty_files": {
+        "type": "integer"
+      },
+      "timestamp": {
+        "type": "string",
+        "format": "date-time"
+      }
+    },
+    "required": [
+      "id",
+      "issue_id",
+      "event",
+      "commit_sha",
+      "branch",
+      "dirty_files",
+      "timestamp"
+    ],
+    "x-source": "internal/models/models.go#GitSnapshot"
+  },
+  "IssueFile": {
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "string"
+      },
+      "issue_id": {
+        "type": "string"
+      },
+      "file_path": {
+        "type": "string"
+      },
+      "role": {
+        "type": "string"
+      },
+      "linked_sha": {
+        "type": "string"
+      },
+      "linked_at": {
+        "type": "string",
+        "format": "date-time"
+      }
+    },
+    "required": [
+      "id",
+      "issue_id",
+      "file_path",
+      "role",
+      "linked_sha",
+      "linked_at"
+    ],
+    "x-source": "internal/models/models.go#IssueFile"
+  },
+  "WorkSession": {
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "string"
+      },
+      "name": {
+        "type": "string"
+      },
+      "session_id": {
+        "type": "string"
+      },
+      "worktree_id": {
+        "type": "string"
+      },
+      "worktree_root": {
+        "type": "string"
+      },
+      "repo_root": {
+        "type": "string"
+      },
+      "started_at": {
+        "type": "string",
+        "format": "date-time"
+      },
+      "ended_at": {
+        "type": "string",
+        "format": "date-time",
+        "nullable": true
+      },
+      "start_sha": {
+        "type": "string"
+      },
+      "end_sha": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "id",
+      "name",
+      "session_id",
+      "started_at"
+    ],
+    "x-source": "internal/models/models.go#WorkSession"
+  },
+  "Note": {
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "string"
+      },
+      "title": {
+        "type": "string"
+      },
+      "content": {
+        "type": "string"
+      },
+      "created_at": {
+        "type": "string",
+        "format": "date-time"
+      },
+      "updated_at": {
+        "type": "string",
+        "format": "date-time"
+      },
+      "pinned": {
+        "type": "boolean"
+      },
+      "archived": {
+        "type": "boolean"
+      },
+      "deleted_at": {
+        "type": "string",
+        "format": "date-time",
+        "nullable": true
+      }
+    },
+    "required": [
+      "id",
+      "title",
+      "content",
+      "created_at",
+      "updated_at",
+      "pinned",
+      "archived"
+    ],
+    "x-source": "internal/models/models.go#Note"
+  },
+  "PreservedHistory": {
+    "type": "object",
+    "properties": {
+      "kind": {
+        "type": "string"
+      },
+      "source_key": {
+        "type": "string"
+      },
+      "source_digest": {
+        "type": "string"
+      },
+      "content_digest": {
+        "type": "string"
+      },
+      "parts_present": {
+        "type": "integer"
+      },
+      "parts_expected": {
+        "type": "integer"
+      },
+      "complete": {
+        "type": "boolean"
+      },
+      "data": {}
+    },
+    "required": [
+      "kind",
+      "source_key",
+      "source_digest",
+      "content_digest",
+      "parts_present",
+      "parts_expected",
+      "complete"
+    ],
+    "x-source": "internal/models/activity.go#PreservedHistory"
+  },
+  "Activity": {
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "string"
+      },
+      "issue_id": {
+        "type": "string"
+      },
+      "kind": {
+        "type": "string"
+      },
+      "operation_id": {
+        "type": "string"
+      },
+      "session_id": {
+        "type": "string"
+      },
+      "work_session_id": {
+        "type": "string"
+      },
+      "message": {
+        "type": "string"
+      },
+      "log_type": {
+        "type": "string"
+      },
+      "done": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "remaining": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "decisions": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "uncertain": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "snapshot": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/GitSnapshot"
+          }
+        ],
+        "nullable": true,
+        "type": "object"
+      },
+      "author": {
+        "type": "string"
+      },
+      "created_at": {
+        "type": "string",
+        "format": "date-time"
+      },
+      "updated_at": {
+        "type": "string",
+        "format": "date-time"
+      },
+      "url": {
+        "type": "string"
+      },
+      "native": {
+        "type": "boolean"
+      },
+      "edited": {
+        "type": "boolean"
+      },
+      "preserved_history": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/PreservedHistory"
+          }
+        ],
+        "nullable": true,
+        "type": "object"
+      }
+    },
+    "required": [
+      "kind",
+      "created_at",
+      "updated_at"
+    ],
+    "x-source": "internal/models/activity.go#Activity"
+  }
+}
