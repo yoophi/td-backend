@@ -2,7 +2,7 @@
 
 `td`의 세 번째 store로 사용할 HTTP backend를 설계하는 프로젝트입니다. **Go · SQLite · hexagonal architecture**를 사용하며 `td CLI`, `td monitor`, `td serve`를 통한 `td-gui` 연결을 대상으로 합니다.
 
-현재 **단계별 구현 중**입니다. Go 서버의 구성·health endpoint와 SQLite 저장 adapter를 구현했으며, 프로젝트/작업 API와 td client 연동을 순서대로 진행합니다. 아래 td 명령은 client adapter 구현 후 제공할 목표 사용법입니다. 완료 범위는 [구현 진행 기록](docs/implementation-progress.md)과 td task 상태를 확인합니다.
+현재 **단계별 구현 중**입니다. Go 서버와 SQLite 저장 adapter, Project/Session 초기화·조회·인증 API를 구현했으며 이슈/workflow와 td client 연동을 진행합니다. 아래 td 명령은 client adapter 구현 후 제공할 목표 사용법입니다. 완료 범위는 [구현 진행 기록](docs/implementation-progress.md)과 td task 상태를 확인합니다.
 
 ## 목표 사용법
 
@@ -104,9 +104,13 @@ Go 서버는 다음 명령으로 빌드·실행·검증합니다. 기본 DB는 `
 make build
 make test-race
 make check
+# 최초 한 번 생성해 보관하고, 재시작에서는 동일한 값을 사용
+export TD_BACKEND_BOOTSTRAP_TOKEN="$(openssl rand -hex 32)"
 ./bin/td-backend --addr 127.0.0.1:7000 --db ./data/td-backend.db
 curl http://127.0.0.1:7000/healthz
 ```
+
+Bootstrap token은 32자 이상이며 digest만 SQLite에 저장합니다. 설정 token을 변경하면 기존 bootstrap credential은 폐기됩니다. `/healthz` 외 구현된 API는 bearer token을 요구합니다. 현재 구현된 routes는 `GET /v1/capabilities`, `GET/POST /v1/projects`, `GET /v1/projects/{project_id}`, `GET/POST /v1/projects/{project_id}/sessions`입니다. Session 등록을 제외한 project-scoped 조회는 등록된 `X-TD-Session`도 필요합니다.
 
 OpenAPI 및 DDL 명세는 Python 3와 개발 의존성으로 검증합니다.
 

@@ -1,6 +1,6 @@
 # Go · SQLite · Hexagonal backend 설계
 
-이 문서는 기존 [HTTP 명세](../swagger.json)를 구현할 backend의 설계입니다. 언어는 Go, 저장소는 SQLite이며 domain/application을 HTTP와 SQL에서 독립시킵니다. 설계 상태이고 서버 코드는 아직 없습니다. 도메인 용어는 [CONTEXT.md](../CONTEXT.md), 저장소 결정은 [ADR-0001](adr/0001-single-sqlite-transaction-boundary.md)을 기준으로 합니다.
+이 문서는 기존 [HTTP 명세](../swagger.json)를 구현할 backend의 기준 설계입니다. 언어는 Go, 저장소는 SQLite이며 domain/application을 HTTP와 SQL에서 독립시킵니다. 실제 구현 범위와 검증 결과는 [구현 진행 기록](implementation-progress.md)에 기록합니다. 도메인 용어는 [CONTEXT.md](../CONTEXT.md), 저장소 결정은 [ADR-0001](adr/0001-single-sqlite-transaction-boundary.md)을 기준으로 합니다.
 
 ## 구조와 의존 방향
 

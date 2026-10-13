@@ -19,14 +19,22 @@ type ReadSnapshot interface {
 	Context() context.Context
 	Projects() ProjectReader
 	Issues() IssueReader
+	Access() AccessReader
+	Sessions() SessionReader
+	Operations() OperationReader
 }
 type TxScope interface {
 	ReadSnapshot
 	ProjectWrites() ProjectWriter
 	IssueWrites() IssueWriter
+	AccessWrites() AccessWriter
+	SessionWrites() SessionWriter
+	BoardWrites() BoardWriter
+	OperationWrites() OperationWriter
 }
 type ProjectReader interface {
 	Get(context.Context, string) (*domain.Project, error)
+	ListForActor(context.Context, string) ([]domain.Project, error)
 }
 type ProjectWriter interface {
 	Create(context.Context, domain.Project) error

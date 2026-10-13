@@ -1,0 +1,33 @@
+package port
+
+import (
+	"context"
+	"time"
+)
+
+type StoredReply struct {
+	Status  int
+	Headers map[string]string
+	Body    []byte
+}
+type ReceiptEncoder interface {
+	Encode(string, any) (StoredReply, error)
+}
+type Mutation struct {
+	Key          string
+	Fingerprint  []byte
+	Method, Path string
+}
+type Receipt struct {
+	RowID, ProjectID, ActorID, SessionID, Scope, Key, Kind, Method, Path string
+	Fingerprint                                                          []byte
+	RepresentationVersion                                                int
+	Reply                                                                StoredReply
+	CreatedAt                                                            time.Time
+}
+type OperationReader interface {
+	Get(context.Context, string, string, string) (Receipt, error)
+}
+type OperationWriter interface {
+	Save(context.Context, Receipt) error
+}

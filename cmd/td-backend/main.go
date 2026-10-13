@@ -5,7 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"github.com/yoophi/td-backend/internal/adapter/httpapi"
+	"github.com/yoophi/td-backend/internal/adapter/httpapi/receiptcodec"
+	"github.com/yoophi/td-backend/internal/adapter/identity"
 	"github.com/yoophi/td-backend/internal/adapter/sqlite"
+	"github.com/yoophi/td-backend/internal/adapter/tokenauth"
+	"github.com/yoophi/td-backend/internal/application/project"
 	"github.com/yoophi/td-backend/internal/config"
 	"log/slog"
 	"net"
@@ -21,16 +25,25 @@ func run(ctx context.Context, args []string) error {
 	if err != nil {
 		return err
 	}
+	if len(cfg.BootstrapToken) < 32 {
+		return fmt.Errorf("TD_BACKEND_BOOTSTRAP_TOKEN must contain at least 32 characters")
+	}
 	store, err := sqlite.Open(ctx, cfg.DBPath, sqlite.Options{Readers: cfg.Readers, BusyTimeout: cfg.BusyTimeout})
 	if err != nil {
 		return err
 	}
 	defer store.Close()
+	auth := tokenauth.New(store, store)
+	if err = auth.Bootstrap(ctx, cfg.BootstrapToken); err != nil {
+		return err
+	}
+	ids := identity.New()
+	projects := &project.Service{Writes: store, Reads: store, Encoder: receiptcodec.Codec{}, ID: ids.ID, Now: time.Now}
 	listener, err := net.Listen("tcp", cfg.Address)
 	if err != nil {
 		return err
 	}
-	server := &http.Server{Handler: httpapi.New(), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 30 * time.Second, IdleTimeout: time.Minute, BaseContext: func(net.Listener) context.Context { return ctx }}
+	server := &http.Server{Handler: httpapi.New(httpapi.Options{Projects: projects, Auth: auth}), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 30 * time.Second, IdleTimeout: time.Minute, BaseContext: func(net.Listener) context.Context { return ctx }}
 	// WriteTimeout stays zero for future long-lived SSE streams.
 	slog.Info("td-backend listening", "address", listener.Addr().String(), "sqlite", store.Version())
 	done := make(chan error, 1)

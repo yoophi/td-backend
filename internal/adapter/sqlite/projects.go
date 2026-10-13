@@ -10,6 +10,39 @@ import (
 
 type projectRepo struct{ *scope }
 
+func (r projectRepo) ListForActor(ctx context.Context, actor string) ([]domain.Project, error) {
+	if e := r.check(); e != nil {
+		return nil, e
+	}
+	rows, e := r.tx.QueryContext(ctx, "SELECT project_id FROM project_memberships WHERE actor_id=? ORDER BY project_id", actor)
+	if e != nil {
+		return nil, classify(e)
+	}
+	ids := []string{}
+	for rows.Next() {
+		var id string
+		if e = rows.Scan(&id); e != nil {
+			rows.Close()
+			return nil, e
+		}
+		ids = append(ids, id)
+	}
+	e = rows.Err()
+	rows.Close()
+	if e != nil {
+		return nil, e
+	}
+	result := []domain.Project{}
+	for _, id := range ids {
+		p, e := r.Get(ctx, id)
+		if e != nil {
+			return nil, e
+		}
+		result = append(result, *p)
+	}
+	return result, nil
+}
+
 func (r projectRepo) Get(ctx context.Context, id string) (*domain.Project, error) {
 	if err := r.check(); err != nil {
 		return nil, err
