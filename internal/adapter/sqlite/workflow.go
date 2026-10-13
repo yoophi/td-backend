@@ -80,18 +80,19 @@ func (r workflowRepo) SaveReview(ctx context.Context, project string, review por
 }
 
 type activityPayload struct {
-	Done      []string       `json:"done"`
-	Remaining []string       `json:"remaining"`
-	Decisions []string       `json:"decisions"`
-	Uncertain []string       `json:"uncertain"`
-	Snapshot  *port.Snapshot `json:"snapshot,omitempty"`
+	SnapshotEvent string         `json:"snapshot_event,omitempty"`
+	Done          []string       `json:"done"`
+	Remaining     []string       `json:"remaining"`
+	Decisions     []string       `json:"decisions"`
+	Uncertain     []string       `json:"uncertain"`
+	Snapshot      *port.Snapshot `json:"snapshot,omitempty"`
 }
 
 func (r workflowRepo) AppendActivity(ctx context.Context, project string, a port.Activity) error {
 	if e := r.check(); e != nil {
 		return e
 	}
-	payload, e := json.Marshal(activityPayload{a.Done, a.Remaining, a.Decisions, a.Uncertain, a.Snapshot})
+	payload, e := json.Marshal(activityPayload{a.SnapshotEvent, a.Done, a.Remaining, a.Decisions, a.Uncertain, a.Snapshot})
 	if e != nil {
 		return e
 	}
@@ -126,6 +127,7 @@ func (r workflowRepo) LatestHandoff(ctx context.Context, project, issue string) 
 	a.Decisions = decoded.Decisions
 	a.Uncertain = decoded.Uncertain
 	a.Snapshot = decoded.Snapshot
+	a.SnapshotEvent = decoded.SnapshotEvent
 	a.CreatedAt, e = time.Parse(time.RFC3339Nano, stamp)
 	return &a, e
 }

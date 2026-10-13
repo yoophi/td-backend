@@ -26,9 +26,10 @@ type Result struct{ Issue domain.Issue }
 
 // State is the versioned issue aggregate payload persisted for conditional undo.
 type State struct {
-	Files        []domain.IssueFile `json:"files"`
-	Issue        domain.Issue       `json:"issue"`
-	Dependencies []port.Dependency  `json:"dependencies"`
+	ActivityChanges []port.Activity    `json:"activity_changes,omitempty"`
+	Files           []domain.IssueFile `json:"files"`
+	Issue           domain.Issue       `json:"issue"`
+	Dependencies    []port.Dependency  `json:"dependencies"`
 }
 
 func invalid(field, message string) error {
@@ -181,7 +182,11 @@ func SaveEffect(command operation.CommandContext, project string, before *State,
 	if e != nil {
 		return e
 	}
-	return command.Tx.OperationWrites().SaveEffect(command.Tx.Context(), port.Effect{ProjectID: project, OperationRowID: command.RowID, EntityKind: "issue", EntityID: after.Issue.ID, AfterRevision: domain.Revision(after.Issue.Revision), StateVersion: 2, BeforeJSON: previous, AfterJSON: next})
+	version := 2
+	if after.ActivityChanges != nil || (before != nil && before.ActivityChanges != nil) {
+		version = 3
+	}
+	return command.Tx.OperationWrites().SaveEffect(command.Tx.Context(), port.Effect{ProjectID: project, OperationRowID: command.RowID, EntityKind: "issue", EntityID: after.Issue.ID, AfterRevision: domain.Revision(after.Issue.Revision), StateVersion: version, BeforeJSON: previous, AfterJSON: next})
 }
 func (s *Service) Patch(ctx context.Context, c domain.Caller, m port.Mutation, id, observed string, cmd PatchCommand) (port.StoredReply, error) {
 	return s.mutate(ctx, c, m, id, observed, "issue.update", false, func(command operation.CommandContext, i *domain.Issue) error {

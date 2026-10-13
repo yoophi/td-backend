@@ -13,6 +13,7 @@ import (
 )
 
 type Service struct {
+	Reads  port.ReadStore
 	Runner operation.Runner
 	ID     func(string) (string, error)
 }
@@ -97,7 +98,7 @@ func (s *Service) activity(command operation.CommandContext, c domain.Caller, i 
 	if e != nil {
 		return port.Activity{}, e
 	}
-	a := port.Activity{ID: id, IssueID: i.ID, SessionID: c.SessionID, OperationRowID: command.RowID, Kind: kind, Message: message, ContentVersion: i.ContentVersion, CreatedAt: command.Now, Snapshot: snapshot}
+	a := port.Activity{ID: id, IssueID: i.ID, SessionID: c.SessionID, OperationRowID: command.RowID, Kind: kind, Message: message, SnapshotEvent: kind, Author: c.Actor.Name, ContentVersion: i.ContentVersion, CreatedAt: command.Now, UpdatedAt: command.Now, Snapshot: snapshot}
 	if kind == "log" {
 		a.LogType = domain.LogTypeProgress
 	}
@@ -227,6 +228,7 @@ func (s *Service) Transition(ctx context.Context, c domain.Caller, m port.Mutati
 		if e != nil {
 			return nil, e
 		}
+		a.SnapshotEvent = action
 		if action == "block" {
 			a.LogType = domain.LogTypeBlocker
 		}

@@ -99,3 +99,11 @@ POST status는 transaction 안에서 현재 상태를 확인해 기존 workflow 
 POST reviews는 trusted/delegated에서 approved 또는 changes_requested를 기록하고 Issue를 in_review로 유지합니다. duplicate active approval, minor의 record-only 요청, strict/balanced 모드의 record-only를 거부합니다. changes_requested는 기존 승인을 supersede하고 승인 attribution을 제거합니다. self-review 기록은 security activity로 남기며 attribution의 newline/control character도 거부합니다. 기존 approve record_only 경로도 duplicate/minor/mode 규칙을 맞췄습니다.
 
 HTTP+SQLite 검증: status+force 승인 우회 거부, independent reviewer의 status close, noop과 불가능한 전이, review status/body/ETag replay, duplicate 승인, changes_requested 이후 무승인 close 거부, strict/balanced mode gate 및 attribution 검증. `go test -race ./...`, `go vet ./...` 통과. 활동 API와 descendant approval cascade, 나머지 gh-8 parity 검증은 계속 진행 중입니다.
+
+### gh-8 — 댓글·로그·공유 활동 API
+
+POST comments/logs/activity, GET activity, DELETE comments를 구현했습니다. 모든 쓰기는 observed revision과 멱등 runner를 거치며 일반 댓글·로그는 content version과 승인을 유지합니다. passive handoff는 상태를 유지하고 review 기준을 갱신합니다. WorkSession 연결은 같은 project에서 소유 Session과 종료 여부를 확인합니다. activity 응답은 외부 operation key와 서버 attribution을 사용하고 git snapshot event도 보존합니다.
+
+댓글 삭제는 soft delete로 audit history를 보존합니다. Activity 변경 command의 aggregate snapshot version 3은 전체 history 대신 변경된 활동의 before/after delta를 담습니다. gh-12 Undo는 version 1/2뿐 아니라 이 delta 형식도 처리해야 합니다. 일반 workflow 활동 이력은 감사 기록으로 유지합니다. request JSON의 nested null도 거부하도록 strict decoder를 보완했습니다.
+
+HTTP+SQLite 검증: 댓글 replay, 댓글·로그의 승인 유지, soft-delete 이력 보존과 activity 조회 제외, 외부 UUIDv4 operation key, activity delta version, passive handoff의 비자동 review 제출과 승인 무효화, 다른/종료/없는 WorkSession 연결 거부, log type/message 및 nested null 검증. `go test -race ./...`, `go vet ./...` 통과. gh-8은 descendant approval cascade와 전체 policy/transaction acceptance 점검이 남아 있습니다.

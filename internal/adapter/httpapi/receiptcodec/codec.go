@@ -48,6 +48,32 @@ func (Codec) Encode(kind string, outcome any) (port.StoredReply, error) {
 		outcome = struct {
 			Dependency DependencyDTO `json:"dependency"`
 		}{dependenciesDTO([]port.Dependency{result.Dependency})[0]}
+	case "activity.append", "activity.comment", "activity.log", "activity.delete":
+		result, ok := outcome.(workflow.ActivityResult)
+		if !ok {
+			return port.StoredReply{}, fmt.Errorf("invalid activity outcome")
+		}
+		headers["ETag"] = `"` + domain.Revision(result.Issue.Revision) + `"`
+		a := result.Activity
+		switch kind {
+		case "activity.append":
+			outcome = struct {
+				Activity ActivityDTO `json:"activity"`
+			}{ActivityDTOFrom(a)}
+		case "activity.comment":
+			outcome = struct {
+				Comment domain.Comment `json:"comment"`
+			}{domain.Comment{ID: a.ID, IssueID: a.IssueID, SessionID: a.SessionID, Text: a.Message, CreatedAt: a.CreatedAt}}
+		case "activity.log":
+			outcome = struct {
+				Log LogDTO `json:"log"`
+			}{LogDTO{a.ID, a.IssueID, a.SessionID, a.WorkSessionID, a.Message, a.LogType, a.CreatedAt}}
+		case "activity.delete":
+			status = 200
+			outcome = struct {
+				Deleted bool `json:"deleted"`
+			}{true}
+		}
 	case "workflow.review":
 		result, ok := outcome.(workflow.ReviewResult)
 		if !ok {

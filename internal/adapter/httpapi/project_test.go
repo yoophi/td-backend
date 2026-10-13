@@ -54,7 +54,7 @@ func newHarness(t *testing.T) *harness {
 	ids := identity.New()
 	svc := &project.Service{Writes: store, Reads: store, Encoder: receiptcodec.Codec{}, ID: ids.ID, Now: time.Now}
 	h := &harness{t: t, store: store, projects: svc, auth: auth, path: path}
-	h.server = httptest.NewServer(New(Options{Projects: svc, Auth: auth, Workflows: &workflow.Service{ID: ids.ID, Runner: operation.Runner{Writes: store, Encoder: receiptcodec.Codec{}, ID: ids.ID, Now: time.Now}}, Issues: &issue.Service{Reads: store, ID: ids.ID, Runner: operation.Runner{Writes: store, Encoder: receiptcodec.Codec{}, ID: ids.ID, Now: time.Now}}}))
+	h.server = httptest.NewServer(New(Options{Projects: svc, Auth: auth, Workflows: &workflow.Service{Reads: store, ID: ids.ID, Runner: operation.Runner{Writes: store, Encoder: receiptcodec.Codec{}, ID: ids.ID, Now: time.Now}}, Issues: &issue.Service{Reads: store, ID: ids.ID, Runner: operation.Runner{Writes: store, Encoder: receiptcodec.Codec{}, ID: ids.ID, Now: time.Now}}}))
 	t.Cleanup(func() { h.server.Close(); h.store.Close() })
 	return h
 }

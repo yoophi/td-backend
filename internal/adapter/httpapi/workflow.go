@@ -44,6 +44,7 @@ func registerWorkflow(mux *http.ServeMux, svc *workflow.Service, protect func(ht
 		}
 		writeReply(w, reply)
 	}))
+	registerActivities(mux, svc, protect, caller)
 	for _, action := range []string{"start", "unstart", "block", "unblock", "reopen", "review", "approve", "close", "reject"} {
 		mux.HandleFunc("POST /v1/projects/{project_id}/issues/{issue_id}/"+action, protect(func(w http.ResponseWriter, r *http.Request) {
 			var cmd workflow.TransitionCommand

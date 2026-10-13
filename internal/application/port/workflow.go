@@ -14,6 +14,9 @@ type Review struct {
 	OperationRowID      string
 }
 type Activity struct {
+	OperationID, Author, SnapshotEvent                    string
+	UpdatedAt                                             time.Time
+	DeletedAt                                             *time.Time
 	ID, IssueID, SessionID, WorkSessionID, OperationRowID string
 	Kind, Message                                         string
 	LogType                                               domain.LogType
@@ -31,9 +34,17 @@ type WorkflowReader interface {
 	History(context.Context, string, string) ([]domain.IssueSessionHistory, error)
 	ActiveReview(context.Context, string, string) (*Review, error)
 	LatestHandoff(context.Context, string, string) (*Activity, error)
+	Activities(context.Context, string, string, bool) ([]Activity, error)
+	WorkSessionAccess(context.Context, string, string) (WorkSessionAccess, error)
 }
 type WorkflowWriter interface {
 	RecordHistory(context.Context, string, domain.IssueSessionHistory, string) error
 	SaveReview(context.Context, string, Review) error
 	AppendActivity(context.Context, string, Activity) error
+	DeleteComment(context.Context, string, string, string, time.Time) error
+}
+
+type WorkSessionAccess struct {
+	SessionID string
+	Ended     bool
 }

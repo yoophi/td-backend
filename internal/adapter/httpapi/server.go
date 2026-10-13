@@ -205,6 +205,9 @@ func walkJSON(decoder *json.Decoder) error {
 	if e != nil {
 		return e
 	}
+	if token == nil {
+		return fmt.Errorf("null is not allowed")
+	}
 	delimiter, ok := token.(json.Delim)
 	if !ok {
 		return nil
