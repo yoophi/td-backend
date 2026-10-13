@@ -2,6 +2,7 @@ package workflow
 
 import (
 	"strings"
+	"unicode"
 	"unicode/utf8"
 
 	"github.com/yoophi/td-backend/internal/application/operation"
@@ -20,6 +21,9 @@ func validateTransition(cmd *TransitionCommand, action string) error {
 	cmd.AdminReason = strings.TrimSpace(cmd.AdminReason)
 	if (raw != "" && cmd.ReviewedBy == "") || utf8.RuneCountInString(cmd.ReviewedBy) > reviewpolicy.MaxReviewedByLen {
 		return invalid("reviewed_by", "expected 1..120 nonblank characters")
+	}
+	if strings.ContainsFunc(raw, func(r rune) bool { return r == '\n' || r == '\r' || (unicode.IsControl(r) && r != '\t') }) {
+		return invalid("reviewed_by", "control characters and newlines are not allowed")
 	}
 	if cmd.SelfReview && cmd.ReviewedBy != "" {
 		return invalid("self_review", "mutually exclusive with reviewed_by")
@@ -49,7 +53,13 @@ func (s *Service) finish(command operation.CommandContext, c domain.Caller, f Fa
 		return domain.ErrConflict
 	}
 	if cmd.RecordOnly && (f.Mode != reviewpolicy.ModeTrusted && f.Mode != reviewpolicy.ModeDelegated) {
-		return invalid("record_only", "record-only requires trusted or delegated mode")
+		return domain.ErrConflict
+	}
+	if cmd.RecordOnly && i.Minor {
+		return invalid("record_only", "minor issues do not need a recorded review")
+	}
+	if cmd.RecordOnly && f.HasActiveApproval() {
+		return domain.ErrConflict
 	}
 	if cmd.RecordOnly && cmd.Reason == "" {
 		return invalid("reason", "record-only approval requires a reason")

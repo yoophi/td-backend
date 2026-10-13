@@ -48,6 +48,16 @@ func (Codec) Encode(kind string, outcome any) (port.StoredReply, error) {
 		outcome = struct {
 			Dependency DependencyDTO `json:"dependency"`
 		}{dependenciesDTO([]port.Dependency{result.Dependency})[0]}
+	case "workflow.review":
+		result, ok := outcome.(workflow.ReviewResult)
+		if !ok {
+			return port.StoredReply{}, fmt.Errorf("invalid review outcome")
+		}
+		headers["ETag"] = `"` + domain.Revision(result.Issue.Revision) + `"`
+		outcome = struct {
+			Issue  IssueDTO           `json:"issue"`
+			Review domain.IssueReview `json:"review"`
+		}{IssueDTOFrom(result.Issue), result.Review}
 	case "workflow.transition":
 		result, ok := outcome.(workflow.TransitionResult)
 		if !ok {

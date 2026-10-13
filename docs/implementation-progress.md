@@ -91,3 +91,11 @@ POST/DELETE dependencies와 PUT files를 구현했습니다. 의존 관계 추�
 관계 변경은 revision/content version 증가·review supersession·관계 persistence·operation effect/receipt를 같은 transaction에서 처리합니다. Aggregate snapshot version 2는 files를 포함하며 이전/이후 연결을 보존합니다. 일반 Issue/workflow 변경도 파일 목록을 유지하는 snapshot을 기록하고, 전용 Files reader로 전체 Issue context를 불필요하게 읽지 않습니다. Undo 구현 gh-12는 기존 version 1과 version 2를 모두 해석해야 합니다.
 
 검증: 실제 HTTP+SQLite에서 3-node cycle/self edge, 잘못된 source에서 삭제, project 간 연결 거부, file role/path/duplicate validation, 승인 무효화, 파일 INSERT 실패의 이전 연결/revision 보존과 같은 key 재시도, snapshot before/after files를 확인했습니다. `go test -race ./...`, `go vet ./...` 통과. gh-8의 활동·review/status endpoints와 나머지 cascade/parity 검증은 계속 진행합니다.
+
+### gh-8 — explicit status와 record-only review API
+
+POST status는 transaction 안에서 현재 상태를 확인해 기존 workflow action으로 해석하며 승인/종료 정책을 그대로 적용합니다. 동일 상태는 noop, 지원하지 않는 전이는 409입니다. review에서 in_progress로 복귀하면 기존 승인을 무효화하고 구현 참여 이력을 남깁니다.
+
+POST reviews는 trusted/delegated에서 approved 또는 changes_requested를 기록하고 Issue를 in_review로 유지합니다. duplicate active approval, minor의 record-only 요청, strict/balanced 모드의 record-only를 거부합니다. changes_requested는 기존 승인을 supersede하고 승인 attribution을 제거합니다. self-review 기록은 security activity로 남기며 attribution의 newline/control character도 거부합니다. 기존 approve record_only 경로도 duplicate/minor/mode 규칙을 맞췄습니다.
+
+HTTP+SQLite 검증: status+force 승인 우회 거부, independent reviewer의 status close, noop과 불가능한 전이, review status/body/ETag replay, duplicate 승인, changes_requested 이후 무승인 close 거부, strict/balanced mode gate 및 attribution 검증. `go test -race ./...`, `go vet ./...` 통과. 활동 API와 descendant approval cascade, 나머지 gh-8 parity 검증은 계속 진행 중입니다.

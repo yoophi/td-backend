@@ -17,6 +17,7 @@ type Service struct {
 	ID     func(string) (string, error)
 }
 type TransitionCommand struct {
+	TargetStatus       *domain.Status `json:"-"`
 	ReviewedBy         string         `json:"reviewed_by"`
 	SelfReview         bool           `json:"self_review"`
 	RecordOnly         bool           `json:"record_only"`
@@ -115,7 +116,30 @@ func (s *Service) Transition(ctx context.Context, c domain.Caller, m port.Mutati
 		before := i
 		result := TransitionResult{ParentStatusUpdates: []domain.Issue{}, AutoUnblocked: []domain.Issue{}}
 		var history domain.IssueSessionAction
+		if cmd.TargetStatus != nil {
+			if *cmd.TargetStatus == i.Status {
+				result.Issue = i
+				result.Noop = true
+				return result, nil
+			}
+			action, e = statusAction(i.Status, *cmd.TargetStatus)
+			if e != nil {
+				return nil, e
+			}
+		}
 		switch action {
+		case "resume":
+			if i.Status != domain.StatusInReview {
+				return nil, domain.ErrConflict
+			}
+			if e = invalidate(command, c, &i); e != nil {
+				return nil, e
+			}
+			i.Status = domain.StatusInProgress
+			i.ImplementerSession = c.SessionID
+			i.ReviewRequestedBySession = ""
+			history = domain.ActionSessionStarted
+
 		case "approve", "close":
 			if e = s.finish(command, c, f, &i, action, cmd); e != nil {
 				return nil, e
