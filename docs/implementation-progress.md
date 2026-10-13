@@ -288,3 +288,9 @@ CLI integration branch의 `d37f15c`는 기존 GitHub wrapper가 SQLite 이외 st
 `603b745`는 후속 gh-15/16의 HTTP 기반을 추가합니다. Issue DTO는 CLI model과 observed revision을 함께 유지합니다. List는 offset 페이지를 모두 수집하고 opaque change token이 달라지면 처음부터 재시작합니다(최대 3회). 페이지 metadata·중복 ID·잘못된 revision·진전 없는 페이지는 부분 성공 대신 오류로 반환합니다. 쓰기는 caller의 UUIDv4 key와 관찰한 revision의 strong If-Match를 보내며 자동 재시도하지 않습니다. status별 typed APIError와 keyed write의 응답 유실/손상 및 5xx 결과 불확실 오류를 구분합니다. 서버 오류 body/credential은 출력하지 않으며 redirect credential 전송을 차단합니다.
 
 pagination restart/불안정 snapshot/중복·빈 페이지·nullable DTO/cancel, If-Match/key 전달, stale·auth·conflict·store 오류, 불확실 write의 key 보존, redirect 회귀가 race 검사와 vet를 통과했습니다. caller Session의 장기 연결 및 OpenReader/CLI command dispatch는 아직 후속 작업입니다. 전체 CLI make test는 계속 실행 중이므로 gh-14/15를 완료로 처리하지 않았습니다.
+
+## gh-15 기반 — durable Caller Session과 원격 Reader
+
+CLI integration branch `575b314`에서 backendstore.Open과 원격 Reader를 연결했습니다. 공유 Project association과 별개로 device/checkout/branch/agent/명시 context/credential digest별 등록 intent를 사용자 config 디렉터리에 저장합니다. 등록 UUIDv4 key와 immutable command를 HTTP 전에 원자 기록하고, 응답 유실이나 session-ID 저장 실패 시 같은 key/payload로 복구합니다. credential 변경 시 다른 Session context를 쓰며 token 원문은 저장하지 않습니다. 파일은 0600이고 HTTP 중 config lock을 유지하지 않습니다. Project 접근은 등록된 Session으로 다시 확인합니다.
+
+OpenReader의 backend 경로는 typed client로 조회하며, 실제 checkout을 명시하는 OpenReaderWithContext도 제공합니다. Reader Record는 observed revision을 보존합니다. 로컬 SQLite와 GitHub client는 사용하지 않습니다. 유실 등록 복구/동시 등록 중복 방지/명시 context·credential·checkout 분리/permissions/token 미저장 및 Reader의 Session header/revision/cancel/no-DB 회귀가 race와 vet를 통과했습니다. CLI list/show/query/search/stats 직접 dispatch는 다음 작업이며 gh-15 전체를 완료 처리하지 않았습니다. 기존 전체 make test(60m)는 아직 실행 중입니다.
