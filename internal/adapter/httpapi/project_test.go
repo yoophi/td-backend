@@ -21,6 +21,7 @@ import (
 	"github.com/yoophi/td-backend/internal/adapter/sqlite"
 	"github.com/yoophi/td-backend/internal/adapter/tokenauth"
 	"github.com/yoophi/td-backend/internal/application/board"
+	"github.com/yoophi/td-backend/internal/application/focus"
 	"github.com/yoophi/td-backend/internal/application/issue"
 	"github.com/yoophi/td-backend/internal/application/note"
 	"github.com/yoophi/td-backend/internal/application/operation"
@@ -62,6 +63,7 @@ func newHarness(t *testing.T) *harness {
 		Projects: svc, Auth: auth,
 		Boards:       &board.Service{Reads: store, ID: ids.ID, Runner: runner},
 		Notes:        &note.Service{Reads: store, ID: ids.ID, Runner: runner},
+		Focus:        &focus.Service{Reads: store, Runner: runner},
 		WorkSessions: &worksession.Service{Reads: store, ID: ids.ID, Runner: runner},
 		Workflows:    &workflow.Service{Reads: store, ID: ids.ID, Runner: runner},
 		Issues:       &issue.Service{Reads: store, ID: ids.ID, Runner: runner},

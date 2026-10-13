@@ -173,3 +173,15 @@ Note CRUD와 pin/archive를 scoped ports·SQLite adapter·application service·H
 실제 HTTP+SQLite 테스트에서 다른 Session 수정 거부·공유 조회, 다른 project Issue 혼합 요청의 전체 거부, receipt 실패 rollback과 같은 key 복구, 시작/태그/종료 replay, 종료 후 변경 거부, 빈 태그 및 change_seq를 검증했습니다. WorkSession revision과 전체 tag timestamps의 before/after snapshot, callback 밖 reader 거부도 확인했습니다. Focus 내부 revision과 session focus API는 gh-10/gh-11 연계 범위로 남아 있습니다.
 
 WorkSession 변경 후 전체 `go test -race ./...`, `go vet ./...`, OpenAPI/GUI 계약 검사, `git diff --check`가 통과했습니다.
+
+### gh-10 — 완료: Session Focus와 내부 Undo revision
+
+GET/PUT Focus를 구현했습니다. project와 caller Session을 key로 사용하고, 같은 project의 살아 있는 Issue만 선택합니다. `issue_id: null`은 해제이며, 해제 후에도 row와 증가된 revision을 보존합니다. 미설정 focus의 revision 0과 저장된 clear 상태를 구분하고 version 1 before/after effect에 기록합니다. WorkSession과 같이 focus revision은 내부 Undo 기준이며 HTTP에는 노출하지 않습니다.
+
+strict JSON decoder에 명시적인 최상위 nullable 필드 허용 경로를 추가했습니다. Focus의 issue_id만 null을 허용하며 필드 누락·duplicate·대소문자 변형·잘못된 타입·중첩 null은 거부합니다. 다른 endpoint의 null 거부 규칙은 유지합니다.
+
+실제 HTTP+SQLite에서 서로 다른 Session의 독립 focus, 다른 project/삭제 Issue 거부, clear 및 초기 clear, revision·change_seq, byte-exact replay, clear 이후 과거 set 재시도의 무변경, receipt 실패의 전체 rollback 및 동일 key 복구를 검증했습니다. Versioned effect가 이전 선택과 clear revision을 보존하고 callback 밖 reader 접근을 거부하는 것도 확인했습니다.
+
+gh-10 완료 기준을 직접 검토했습니다. Note soft deletion/revision, WorkSession 소유권·종료 후 수정 제한·태그 clear/project 격리, Focus/WorkSession 내부 revision 및 change counter를 실제 HTTP/SQLite 테스트로 확인했습니다. 일반 query/monitor projection 및 Focus를 포함한 projection 통합은 gh-11, 저장된 effect의 조건부 Undo 실행은 gh-12에서 이어갑니다.
+
+Focus 통합 후 전체 `go test -race ./...`, `go vet ./...`, OpenAPI/GUI 계약 검사 및 `git diff --check` 통과. 직접 구현과 완료 기준을 대조한 self-review입니다.

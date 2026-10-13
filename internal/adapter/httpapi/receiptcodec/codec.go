@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/yoophi/td-backend/internal/application/board"
+	"github.com/yoophi/td-backend/internal/application/focus"
 	"github.com/yoophi/td-backend/internal/application/issue"
 	"github.com/yoophi/td-backend/internal/application/note"
 	"github.com/yoophi/td-backend/internal/application/port"
@@ -19,6 +20,16 @@ func (Codec) Encode(kind string, outcome any) (port.StoredReply, error) {
 	headers := map[string]string{"Content-Type": "application/json"}
 	switch kind {
 	case "project.create", "session.create":
+	case "focus.set":
+		result, ok := outcome.(focus.Result)
+		if !ok {
+			return port.StoredReply{}, fmt.Errorf("invalid focus outcome")
+		}
+		status = 200
+		outcome = struct {
+			FocusedIssueID *string `json:"focused_issue_id"`
+		}{result.Focus.IssueID}
+
 	case "work_session.start", "work_session.tag", "work_session.end":
 		result, ok := outcome.(worksession.Result)
 		if !ok {

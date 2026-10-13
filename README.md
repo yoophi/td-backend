@@ -110,7 +110,7 @@ export TD_BACKEND_BOOTSTRAP_TOKEN="$(openssl rand -hex 32)"
 curl http://127.0.0.1:7000/healthz
 ```
 
-Bootstrap token은 32자 이상이며 digest만 SQLite에 저장합니다. 설정 token을 변경하면 기존 bootstrap credential은 폐기됩니다. `/healthz` 외 구현된 API는 bearer token을 요구합니다. 현재 project·Session 등록/조회, Issue CRUD와 workflow/review/handoff, dependency·file·comment·log·activity, Board CRUD·TDQ 카드 조회·pin/unpin·move, Note CRUD·pin/archive, WorkSession start/read/tag/end API를 구현했습니다. Focus·일반 query/monitor projection·Undo·SSE와 CLI 통합은 진행 중입니다. 구현 및 검증 기록은 [진행 기록](docs/implementation-progress.md)을 참고하세요. Session 등록을 제외한 project-scoped 조회는 등록된 `X-TD-Session`도 필요합니다.
+Bootstrap token은 32자 이상이며 digest만 SQLite에 저장합니다. 설정 token을 변경하면 기존 bootstrap credential은 폐기됩니다. `/healthz` 외 구현된 API는 bearer token을 요구합니다. 현재 project·Session 등록/조회, Issue CRUD와 workflow/review/handoff, dependency·file·comment·log·activity, Board CRUD·TDQ 카드 조회·pin/unpin·move, Note CRUD·pin/archive, WorkSession start/read/tag/end와 Session Focus API를 구현했습니다. 일반 query/monitor projection·Undo·SSE와 CLI 통합은 진행 중입니다. 구현 및 검증 기록은 [진행 기록](docs/implementation-progress.md)을 참고하세요. Session 등록을 제외한 project-scoped 조회는 등록된 `X-TD-Session`도 필요합니다.
 
 OpenAPI 및 DDL 명세는 Python 3와 개발 의존성으로 검증합니다.
 

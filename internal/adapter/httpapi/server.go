@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/yoophi/td-backend/internal/application/board"
+	"github.com/yoophi/td-backend/internal/application/focus"
 	"github.com/yoophi/td-backend/internal/application/note"
 	"github.com/yoophi/td-backend/internal/application/worksession"
 	"io"
@@ -22,6 +23,7 @@ import (
 )
 
 type Options struct {
+	Focus        *focus.Service
 	Boards       *board.Service
 	Notes        *note.Service
 	WorkSessions *worksession.Service
@@ -138,6 +140,9 @@ func New(options ...Options) http.Handler {
 	if opts.WorkSessions != nil {
 		registerWorkSessions(mux, opts.WorkSessions, protect, caller)
 	}
+	if opts.Focus != nil {
+		registerFocus(mux, opts.Focus, protect, caller)
+	}
 	if opts.Notes != nil {
 		registerNotes(mux, opts.Notes, protect, caller)
 	}
@@ -166,6 +171,11 @@ func mutation(r *http.Request, cmd any) (port.Mutation, error) {
 	return port.Mutation{Key: key, Fingerprint: digest[:], Method: r.Method, Path: r.URL.Path}, nil
 }
 func decode(w http.ResponseWriter, r *http.Request, dst any) error {
+	return decodeNullable(w, r, dst, nil)
+}
+
+// decodeNullable permits null only for explicitly named top-level fields.
+func decodeNullable(w http.ResponseWriter, r *http.Request, dst any, nullable map[string]bool) error {
 	if ct := strings.Split(r.Header.Get("Content-Type"), ";")[0]; ct != "application/json" {
 		return invalid("body", "Content-Type application/json required")
 	}
@@ -175,7 +185,7 @@ func decode(w http.ResponseWriter, r *http.Request, dst any) error {
 	}
 	validator := json.NewDecoder(strings.NewReader(string(data)))
 	validator.UseNumber()
-	if e = walkJSON(validator); e != nil {
+	if e = walkJSON(validator, nullable, false); e != nil {
 		return invalid("body", e.Error())
 	}
 	if _, e = validator.Token(); e != io.EOF {
@@ -198,7 +208,7 @@ func decode(w http.ResponseWriter, r *http.Request, dst any) error {
 			return invalid(field, "unknown field")
 		}
 
-		if string(value) == "null" {
+		if string(value) == "null" && !nullable[field] {
 			return invalid(field, "null is not allowed")
 		}
 		if field == "title_min_length" || field == "title_max_length" {
@@ -215,12 +225,12 @@ func decode(w http.ResponseWriter, r *http.Request, dst any) error {
 	}
 	return nil
 }
-func walkJSON(decoder *json.Decoder) error {
+func walkJSON(decoder *json.Decoder, nullable map[string]bool, allowNull bool) error {
 	token, e := decoder.Token()
 	if e != nil {
 		return e
 	}
-	if token == nil {
+	if token == nil && !allowNull {
 		return fmt.Errorf("null is not allowed")
 	}
 	delimiter, ok := token.(json.Delim)
@@ -243,13 +253,13 @@ func walkJSON(decoder *json.Decoder) error {
 				return fmt.Errorf("duplicate field %q", key)
 			}
 			seen[key] = true
-			if e = walkJSON(decoder); e != nil {
+			if e = walkJSON(decoder, nil, nullable[key]); e != nil {
 				return e
 			}
 		}
 	case '[':
 		for decoder.More() {
-			if e = walkJSON(decoder); e != nil {
+			if e = walkJSON(decoder, nil, false); e != nil {
 				return e
 			}
 		}

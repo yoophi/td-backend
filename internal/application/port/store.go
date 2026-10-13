@@ -26,6 +26,7 @@ type ReadSnapshot interface {
 	Workflow() WorkflowReader
 	Boards() BoardReader
 	Notes() NoteReader
+	Focus() FocusReader
 	WorkSessions() WorkSessionReader
 	Queries() QueryReader
 }
@@ -37,6 +38,7 @@ type TxScope interface {
 	SessionWrites() SessionWriter
 	BoardWrites() BoardWriter
 	NoteWrites() NoteWriter
+	FocusWrites() FocusWriter
 	WorkSessionWrites() WorkSessionWriter
 	OperationWrites() OperationWriter
 	WorkflowWrites() WorkflowWriter
