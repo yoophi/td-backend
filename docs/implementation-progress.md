@@ -384,3 +384,7 @@ CLI `start`와 ID 지정 `unstart`를 backend workflow action에 연결했습니
 ## gh-16 진행 — block/unblock/reopen
 
 기존 backend transition adapter를 `block`, `unblock`, `reopen`에 연결했습니다. 명령별 대상 상태를 검증하고 관측 revision/key로 변경합니다. 이미 대상 상태이면 noop으로 처리해 다중 Issue 부분 성공의 재실행을 돕습니다. 실제 서버 smoke에서 block/unblock 및 관리자가 닫은 Issue의 reopen과 각 noop을 확인했습니다.
+
+## gh-16 진행 — comment/comments
+
+CLI `comment`와 `comments add`를 revision/key가 있는 원격 활동 추가 API에 연결했습니다. 결과의 Issue, Session, 본문과 생성시각을 확인한 뒤 intent를 완료합니다. `comments`는 일관된 읽기 snapshot에서 원격 상세의 댓글을 반환합니다. 실제 SQLite 서버 smoke에서 두 추가 경로와 목록·순서를 확인했습니다.

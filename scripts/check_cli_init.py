@@ -327,11 +327,25 @@ def main():
                 assert closed['status'] == 'closed'
                 assert cli_direct('reopen', work['id'])['status'] == 'open'
                 assert cli_direct('reopen', work['id'])['noop']
+                def cli_comment(*tail):
+                    result = subprocess.run([args.cli, '--work-dir', str(repo),
+                        *tail, '--json'], env=env, capture_output=True,
+                        text=True, timeout=30)
+                    if result.returncode:
+                        raise RuntimeError(result.stdout + result.stderr)
+                    return json.loads(result.stdout)
+                comment = cli_comment('comment', work['id'], 'Remote CLI comment fixture')
+                assert comment['comment']['text'] == 'Remote CLI comment fixture'
+                assert comment['comment']['issue_id'] == work['id']
+                cli_comment('comments', 'add', work['id'], 'Second CLI comment')
+                comments = cli_comment('comments', work['id'])
+                assert [item['text'] for item in comments] == [
+                    'Remote CLI comment fixture', 'Second CLI comment']
                 for directory in (repo, attached):
                     assert not (directory / '.todos/issues.db').exists(), 'local SQLite fallback'
                     config = (directory / '.todos/config.json').read_text()
                     assert token not in config, 'token persisted in config'
-                print('PASS: real backend init/reuse/worktree/attach, show/prefix/children/tree/multiple, TDQ fields/hierarchy/comments, ranked log search, list filters/TDQ, info statistics, CLI create/dependency/blocks, deleted listing/write/reason, workflow status/field update/start/unstart/block/unblock/reopen, no local DB/token')
+                print('PASS: real backend init/reuse/worktree/attach, show/prefix/children/tree/multiple, TDQ fields/hierarchy/comments, ranked log search, list filters/TDQ, info statistics, CLI create/dependency/blocks, deleted listing/write/reason, workflow status/field update/start/unstart/block/unblock/reopen, comments, no local DB/token')
             finally:
                 server.terminate()
                 try:
