@@ -396,3 +396,9 @@ CLI `log`를 backend 활동 API에 연결했습니다. 명시한 Issue 또는 �
 ## gh-16 진행 — handoff 수동 활동
 
 CLI `handoff`를 backend의 수동 `activity` 기록에 연결했습니다. done/remaining/decision/uncertain의 직접값·파일·stdin, positional message, Git snapshot과 활성 Work Session ID를 새 요청 준비 시점에 수집해 저장합니다. 비어 있는 항목은 `null` 대신 빈 배열로 전송합니다. 기록 자체는 review 상태를 바꾸지 않으며, 이후 별도 `update --status=in_review`가 최신 handoff를 정책 입력으로 사용합니다. 실제 서버 smoke에서 구조화 항목·snapshot·Work Session 귀속·show 조회·review 전이를 확인했습니다.
+
+## gh-16 진행 — review/reject/close
+
+CLI `review`, `reject`, `close`를 관측 revision 기반 backend workflow action에 연결했습니다. reason 별칭과 close의 admin/self-close exception을 요청에 보냅니다. 서버가 handoff/review 및 권한 정책을 검사하며, CLI는 목표 상태와 Issue ID를 확인합니다. 현재 `review --minor`는 기존 Issue의 필드 변경이 별도 command이므로 사전 거절합니다.
+
+실제 SQLite 서버 smoke에서 handoff→review, reject→새 handoff→review, admin close와 reopen을 확인했습니다. 기존 init 회귀의 미연결 guard는 여전히 미연결인 approve로 옮겼습니다.

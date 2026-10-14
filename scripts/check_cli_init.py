@@ -321,10 +321,11 @@ def main():
                 assert cli_direct('block', work['id'])['noop']
                 assert cli_direct('unblock', work['id'])['status'] == 'open'
                 assert cli_direct('unblock', work['id'])['noop']
-                ready_to_close = show(work['id'])
-                closed = post(base + '/issues/' + work['id'] + '/close', {'admin_reason':'smoke fixture'},
-                    ready_to_close['revision'])['issue']
-                assert closed['status'] == 'closed'
+                close_result = subprocess.run([args.cli, '--work-dir', str(repo),
+                    'close', work['id'], '--admin=smoke fixture', '--json'],
+                    env=env, capture_output=True, text=True, timeout=30)
+                assert close_result.returncode == 0
+                assert json.loads(close_result.stdout)['status'] == 'closed'
                 assert cli_direct('reopen', work['id'])['status'] == 'open'
                 assert cli_direct('reopen', work['id'])['noop']
                 def cli_comment(*tail):
@@ -367,11 +368,16 @@ def main():
                     text=True, timeout=30)
                 assert review_after_handoff.returncode == 0
                 assert json.loads(review_after_handoff.stdout)['issue']['status'] == 'in_review'
+                assert cli_direct('reject', work['id'])['status'] == 'open'
+                second_handoff = cli_comment('handoff', work['id'],
+                    '--done=Revision after rejection')
+                assert second_handoff['activity']['done'] == ['Revision after rejection']
+                assert cli_direct('review', work['id'])['status'] == 'in_review'
                 for directory in (repo, attached):
                     assert not (directory / '.todos/issues.db').exists(), 'local SQLite fallback'
                     config = (directory / '.todos/config.json').read_text()
                     assert token not in config, 'token persisted in config'
-                print('PASS: real backend init/reuse/worktree/attach, show/prefix/children/tree/multiple, TDQ fields/hierarchy/comments, ranked log search, list filters/TDQ, info statistics, CLI create/dependency/blocks, deleted listing/write/reason, workflow status/field update/start/unstart/block/unblock/reopen, comments/log/handoff, no local DB/token')
+                print('PASS: real backend init/reuse/worktree/attach, show/prefix/children/tree/multiple, TDQ fields/hierarchy/comments, ranked log search, list filters/TDQ, info statistics, CLI create/dependency/blocks, deleted listing/write/reason, workflow status/field update/start/unstart/block/unblock/reopen, comments/log/handoff/review/reject/close, no local DB/token')
             finally:
                 server.terminate()
                 try:
