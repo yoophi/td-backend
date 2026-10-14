@@ -162,6 +162,24 @@ def main():
                     capture_output=True, text=True, timeout=30)
                 assert note_show.returncode == 0, note_show.stderr
                 assert json.loads(note_show.stdout)['content'] == 'Shared backend content'
+                def cli_note(*arguments):
+                    result = subprocess.run([args.cli, '--work-dir', str(repo),
+                        'note', *arguments, '--json'], env=env, capture_output=True,
+                        text=True, timeout=30)
+                    if result.returncode:
+                        raise RuntimeError(f"note {' '.join(arguments)} exit {result.returncode}: "
+                                           f"stdout={result.stdout!r}, stderr={result.stderr!r}")
+                    return json.loads(result.stdout)
+                created_note = cli_note('add', 'CLI note', '--content=Initial')['note']
+                assert created_note['title'] == 'CLI note'
+                edited_note = cli_note('edit', created_note['id'], '--content=Edited')['note']
+                assert edited_note['content'] == 'Edited'
+                assert not cli_note('unpin', remote_note['id'])['note']['pinned']
+                assert cli_note('pin', remote_note['id'])['note']['pinned']
+                assert cli_note('archive', created_note['id'])['note']['archived']
+                assert not cli_note('unarchive', created_note['id'])['note']['archived']
+                assert cli_note('delete', created_note['id'])['deleted']
+                assert created_note['id'] not in [note['id'] for note in cli_note('list')]
                 post(base + '/issues/' + child + '/comments', {'text': 'ready for remote query'}, child_record['revision'])
                 def query(expression):
                     result = subprocess.run([args.cli, '--work-dir', str(repo),
@@ -547,7 +565,7 @@ def main():
                     assert not (directory / '.todos/issues.db').exists(), 'local SQLite fallback'
                     config = (directory / '.todos/config.json').read_text()
                     assert token not in config, 'token persisted in config'
-                print('PASS: real backend init/reuse/worktree/attach, show/prefix/children/tree/multiple, board CRUD/positions, note list/show, TDQ fields/hierarchy/comments, ranked log search, list filters/TDQ, info statistics, CLI create/dependency/blocks and dep add/rm/query, files read/link/unlink, deleted listing/write/reason, workflow status/field update/start/unstart/block/unblock/reopen, comments/log/handoff/review/reject/approve auto/all/close, last/undo, no local DB/token')
+                print('PASS: real backend init/reuse/worktree/attach, show/prefix/children/tree/multiple, board CRUD/positions, note read/write/pin/archive/delete, TDQ fields/hierarchy/comments, ranked log search, list filters/TDQ, info statistics, CLI create/dependency/blocks and dep add/rm/query, files read/link/unlink, deleted listing/write/reason, workflow status/field update/start/unstart/block/unblock/reopen, comments/log/handoff/review/reject/approve auto/all/close, last/undo, no local DB/token')
             finally:
                 server.terminate()
                 try:

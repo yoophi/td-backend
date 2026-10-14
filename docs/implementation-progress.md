@@ -1,8 +1,10 @@
 # 구현 진행 기록
 
-CLI `note list/show`는 서버 Note API로 조회합니다. 검색·pin/archive·limit
-필터와 JSON 출력은 CLI에서 적용하며, 실제 서버 스모크에서 공유 Note 조회를
-검증했습니다. 삭제된 Note 조회와 변경 명령은 후속 작업입니다.
+CLI `note list/show/add/edit/delete/pin/unpin/archive/unarchive`를 서버 Note
+API로 연결했습니다. 검색·pin/archive·limit 필터와 JSON 출력은 CLI에서
+적용하며, 변경은 관측 revision과 durable intent를 사용합니다. 실제 서버
+스모크에서 생성·수정·pin·archive·삭제를 검증했습니다. 삭제된 Note 조회와
+복원은 후속 작업입니다.
 
 CLI `board list/show/create/edit/delete/move/unposition`을 서버 Board API에
 연결했습니다. builtin Board와 카드, 보드 정의 변경 및 Issue 위치를 local DB
