@@ -202,6 +202,21 @@ def main():
                 assert cli_ws('current')['work_session']['id'] == started_ws['id']
                 assert cli_ws('tag', parent, '--no-start')['issues'] == [parent]
                 assert parent in cli_ws('current')['issues']
+                ws_log = cli_ws('log', 'Shared progress')['logs']
+                assert len(ws_log) == 1 and ws_log[0]['issue_id'] == parent
+                assert ws_log[0]['work_session_id'] == started_ws['id']
+                assert ws_log[0]['message'] == 'Shared progress'
+                only_log = cli_ws('log', 'Child decision', '--decision', '--only', child)['logs']
+                assert len(only_log) == 1 and only_log[0]['issue_id'] == child
+                assert only_log[0]['type'] == 'decision'
+                assert only_log[0]['work_session_id'] == started_ws['id']
+                assert cli_ws('tag', child, '--no-start')['issues'] == [child]
+                assert set(cli_ws('current')['issues']) == {parent, child}
+                shared_logs = cli_ws('log', 'Both issues have progress')['logs']
+                assert {log['issue_id'] for log in shared_logs} == {parent, child}
+                assert all(log['work_session_id'] == started_ws['id'] for log in shared_logs)
+                assert cli_ws('untag', child)['issues'] == [child]
+                assert cli_ws('current')['issues'] == [parent]
                 assert cli_ws('untag', parent)['issues'] == [parent]
                 assert parent not in cli_ws('current')['issues']
                 assert cli_ws('tag', child)['issues'] == [child]
@@ -284,7 +299,7 @@ def main():
                 assert created_detail['dependencies'][0]['depends_on_id'] == child
                 parent_detail = show(parent)
                 assert any(edge['depends_on_id'] == created['id'] for edge in parent_detail['dependencies'])
-                assert parent_detail['revision'] == 'r-2'
+                assert parent_detail['revision'] == 'r-4'  # Work-session logs also update history.
                 tombstone = post(base + '/issues', {'title': 'Deleted CLI read fixture',
                     'type': 'task', 'priority': 'P2'})['issue']
                 post(base + '/issues/' + tombstone['id'], None, tombstone['revision'], method='DELETE')
@@ -599,7 +614,7 @@ def main():
                     assert not (directory / '.todos/issues.db').exists(), 'local SQLite fallback'
                     config = (directory / '.todos/config.json').read_text()
                     assert token not in config, 'token persisted in config'
-                print('PASS: real backend init/reuse/worktree/attach, show/prefix/children/tree/multiple, board CRUD/positions, note lifecycle including deleted/restore, work-session lifecycle/tag/untag, TDQ fields/hierarchy/comments, ranked log search, list filters/TDQ, info statistics, CLI create/dependency/blocks and dep add/rm/query, files read/link/unlink, deleted listing/write/reason, workflow status/field update/start/unstart/block/unblock/reopen, comments/log/handoff/review/reject/approve auto/all/close, last/undo, no local DB/token')
+                print('PASS: real backend init/reuse/worktree/attach, show/prefix/children/tree/multiple, board CRUD/positions, note lifecycle including deleted/restore, work-session lifecycle/tag/untag/log, TDQ fields/hierarchy/comments, ranked log search, list filters/TDQ, info statistics, CLI create/dependency/blocks and dep add/rm/query, files read/link/unlink, deleted listing/write/reason, workflow status/field update/start/unstart/block/unblock/reopen, comments/log/handoff/review/reject/approve auto/all/close, last/undo, no local DB/token')
             finally:
                 server.terminate()
                 try:
