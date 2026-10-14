@@ -3241,7 +3241,7 @@
           "Activity"
         ],
         "summary": "Read complete shared issue history",
-        "description": "Read complete shared issue history",
+        "description": "Read live issue activity by default; with_deleted=true also reads activity for a soft-deleted issue, preserving handoff history.",
         "responses": {
           "200": {
             "description": "Success",
@@ -3322,6 +3322,15 @@
           },
           {
             "$ref": "#/components/parameters/Session"
+          },
+          {
+            "name": "with_deleted",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            },
+            "description": "",
+            "in": "query"
           }
         ]
       },

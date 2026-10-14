@@ -145,3 +145,42 @@ func TestActivityWorkSessionOwnershipAndValidation(t *testing.T) {
 		t.Fatal("passive handoff submitted review", status, string(data))
 	}
 }
+
+func TestDeletedIssueActivityRequiresExplicitArchiveRead(t *testing.T) {
+	h, _, session, path := reviewFixture(t, "trusted")
+	status, _, data := issueRequest(t, h, "DELETE", path, session, key(t), `"r-3"`, "")
+	if status != 200 {
+		t.Fatal(status, string(data))
+	}
+	for _, query := range []string{"", "?with_deleted=false"} {
+		status, _, data = issueRequest(t, h, "GET", path+"/activity"+query, session, "", "", "")
+		if status != 404 {
+			t.Fatal(query, status, string(data))
+		}
+	}
+	for _, query := range []string{"?with_deleted=1", "?with_deleted=true&with_deleted=false", "?unknown=true"} {
+		status, _, data = issueRequest(t, h, "GET", path+"/activity"+query, session, "", "", "")
+		if status != 400 {
+			t.Fatal(query, status, string(data))
+		}
+	}
+	status, _, data = issueRequest(t, h, "GET", path+"/activity?with_deleted=true", session, "", "", "")
+	if status != 200 {
+		t.Fatal(status, string(data))
+	}
+	var list struct {
+		Data struct{ Activity []receiptcodec.ActivityDTO }
+	}
+	if err := json.Unmarshal(data, &list); err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, activity := range list.Data.Activity {
+		if activity.Kind == "handoff" && len(activity.Done) == 1 && activity.Done[0] == "implemented" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("deleted issue handoff was omitted: %+v", list.Data.Activity)
+	}
+}

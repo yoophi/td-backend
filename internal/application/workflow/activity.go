@@ -157,14 +157,14 @@ func (s *Service) DeleteComment(ctx context.Context, c domain.Caller, m port.Mut
 		return nil, domain.ErrNotFound
 	})
 }
-func (s *Service) ListActivity(ctx context.Context, c domain.Caller, id string) ([]port.Activity, error) {
+func (s *Service) ListActivity(ctx context.Context, c domain.Caller, id string, withDeleted bool) ([]port.Activity, error) {
 	var result []port.Activity
 	e := s.Reads.Snapshot(ctx, func(read port.ReadSnapshot) error {
 		ctx := read.Context()
 		if e := access.Authorize(ctx, read, c, true, false); e != nil {
 			return e
 		}
-		if _, e := read.Issues().Get(ctx, c.ProjectID, id, false); e != nil {
+		if _, e := read.Issues().Get(ctx, c.ProjectID, id, withDeleted); e != nil {
 			return e
 		}
 		var e error

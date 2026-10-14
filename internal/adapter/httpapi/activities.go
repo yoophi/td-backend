@@ -3,6 +3,7 @@ package httpapi
 import (
 	"io"
 	"net/http"
+	"net/url"
 
 	"github.com/yoophi/td-backend/internal/adapter/httpapi/receiptcodec"
 	"github.com/yoophi/td-backend/internal/application/port"
@@ -50,11 +51,20 @@ func registerActivities(mux *http.ServeMux, svc *workflow.Service, protect func(
 		}))
 	}
 	mux.HandleFunc("GET /v1/projects/{project_id}/issues/{issue_id}/activity", protect(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.RawQuery != "" {
-			writeError(w, invalid("query", "no query parameters supported"))
+		withDeleted := false
+		query, err := url.ParseQuery(r.URL.RawQuery)
+		if err != nil {
+			writeError(w, invalid("query", "invalid query parameters"))
 			return
 		}
-		list, e := svc.ListActivity(r.Context(), caller(r), r.PathValue("issue_id"))
+		for name, values := range query {
+			if name != "with_deleted" || len(values) != 1 || values[0] != "true" && values[0] != "false" {
+				writeError(w, invalid("query", "expected one optional with_deleted=true or false"))
+				return
+			}
+			withDeleted = values[0] == "true"
+		}
+		list, e := svc.ListActivity(r.Context(), caller(r), r.PathValue("issue_id"), withDeleted)
 		if e != nil {
 			writeError(w, e)
 			return
