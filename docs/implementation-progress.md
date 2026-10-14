@@ -368,3 +368,9 @@ API의 선택적 `reason`은 같은 transaction에서 progress log와 Undo effec
 CLI `update --status`를 backend 전용 workflow endpoint에 연결했습니다. ID prefix와 관측 revision으로 immutable intent를 구성하고 응답의 ID·status를 확인합니다. 이미 목표 상태면 noop을 반환합니다. 여러 Issue 중 실패한 경우 완료 범위를 보고합니다. 일반 필드와 status를 함께 지정하면 미연결 다단계 동작을 쓰기 전에 거절합니다.
 
 실제 서버 smoke에서 open→in_progress, 동일 상태 noop, handoff 없는 in_review 정책 거부, 혼합 필드 입력의 무변경을 확인했습니다. status는 generic PATCH를 통과하지 않습니다. CLI vet와 관련 race 회귀를 실행했습니다.
+
+## gh-16 진행 — 일반 update PATCH
+
+CLI `update`의 제목·description/acceptance 및 파일 입력·append·type·priority·points·labels·sprint·parent·due/defer 필드를 backend PATCH에 연결했습니다. 관측 revision과 immutable body/key를 먼저 저장한 뒤 한 번 전송합니다. 응답 유실 후 파일이 바뀌어도 원래 본문을 재전송하는 회귀를 추가했습니다. 이미 요청한 값이면 변경을 생략해 다중 Issue 부분 성공 재실행의 중복 revision 증가를 방지합니다. append는 단일 Issue에 한정하고, 아직 미연결인 comment·relation 및 status와 일반 필드의 혼합은 쓰기 전에 오류로 반환합니다.
+
+실제 SQLite 서버 smoke에서 필드 변경·noop·append·다중 Issue 부분 성공 재실행을 검증했습니다. CLI 관련 race/vet 검증도 통과했습니다.

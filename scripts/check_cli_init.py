@@ -248,11 +248,40 @@ def main():
                 assert mixed.returncode != 0
                 assert show(another['id'])['status'] == 'in_progress'
                 assert show(another['id'])['title'] != 'must-not-change'
+                def cli_patch(*flags):
+                    result = subprocess.run([args.cli, '--work-dir', str(repo),
+                        'update', another['id'], *flags, '--json'], env=env,
+                        capture_output=True, text=True, timeout=30)
+                    if result.returncode:
+                        raise RuntimeError(result.stdout + result.stderr)
+                    return json.loads(result.stdout)
+                patch_flags = ('--title=Updated remote fixture',
+                    '--description=Initial text', '--priority=P1', '--points=5',
+                    '--labels=backend,smoke', '--due=2026-12-31', '--parent=' + parent)
+                updated = cli_patch(*patch_flags)
+                assert updated['issue']['title'] == 'Updated remote fixture'
+                assert updated['issue']['description'] == 'Initial text'
+                assert updated['issue']['priority'] == 'P1' and updated['issue']['points'] == 5
+                assert updated['issue']['parent_id'] == parent
+                assert cli_patch(*patch_flags)['noop']
+                appended = cli_patch('--append', '--description=Second text')
+                assert appended['issue']['description'] == 'Initial text\n\nSecond text'
+                partial_patch = [args.cli, '--work-dir', str(repo), 'update',
+                    another['id'], 'td-eeeeeeeeeeeeeeee',
+                    '--title=Partially updated fixture', '--json']
+                first = subprocess.run(partial_patch, env=env, capture_output=True,
+                    text=True, timeout=30)
+                assert first.returncode != 0 and 'completed for ' + another['id'] in first.stdout
+                revision_after_partial = show(another['id'])['revision']
+                second = subprocess.run(partial_patch, env=env, capture_output=True,
+                    text=True, timeout=30)
+                assert second.returncode != 0 and 'completed for ' + another['id'] in second.stdout
+                assert show(another['id'])['revision'] == revision_after_partial
                 for directory in (repo, attached):
                     assert not (directory / '.todos/issues.db').exists(), 'local SQLite fallback'
                     config = (directory / '.todos/config.json').read_text()
                     assert token not in config, 'token persisted in config'
-                print('PASS: real backend init/reuse/worktree/attach, show/prefix/children/tree/multiple, TDQ fields/hierarchy/comments, ranked log search, list filters/TDQ, info statistics, CLI create/dependency/blocks, deleted listing/write/reason, workflow status, no local DB/token')
+                print('PASS: real backend init/reuse/worktree/attach, show/prefix/children/tree/multiple, TDQ fields/hierarchy/comments, ranked log search, list filters/TDQ, info statistics, CLI create/dependency/blocks, deleted listing/write/reason, workflow status/field update, no local DB/token')
             finally:
                 server.terminate()
                 try:
