@@ -200,10 +200,21 @@ def main():
                 started_ws = cli_ws('start', 'CLI work session')['work_session']
                 assert started_ws['name'] == 'CLI work session'
                 assert cli_ws('current')['work_session']['id'] == started_ws['id']
+                assert cli_ws('tag', parent, '--no-start')['issues'] == [parent]
+                assert parent in cli_ws('current')['issues']
+                assert cli_ws('untag', parent)['issues'] == [parent]
+                assert parent not in cli_ws('current')['issues']
+                assert cli_ws('tag', child)['issues'] == [child]
+                assert show(child)['status'] == 'in_progress'
+                assert cli_ws('untag', child)['issues'] == [child]
+                unstart_child = subprocess.run([args.cli, '--work-dir', str(repo),
+                    'unstart', child, '--json'], env=env, capture_output=True,
+                    text=True, timeout=30)
+                assert unstart_child.returncode == 0, unstart_child.stderr
                 ended_ws = cli_ws('end')['work_session']
                 assert ended_ws['id'] == started_ws['id'] and ended_ws['ended_at']
                 assert cli_ws('current')['work_session'] is None
-                post(base + '/issues/' + child + '/comments', {'text': 'ready for remote query'}, child_record['revision'])
+                post(base + '/issues/' + child + '/comments', {'text': 'ready for remote query'}, show(child)['revision'])
                 def query(expression):
                     result = subprocess.run([args.cli, '--work-dir', str(repo),
                         'query', expression, '--json'], env=env, capture_output=True,
@@ -588,7 +599,7 @@ def main():
                     assert not (directory / '.todos/issues.db').exists(), 'local SQLite fallback'
                     config = (directory / '.todos/config.json').read_text()
                     assert token not in config, 'token persisted in config'
-                print('PASS: real backend init/reuse/worktree/attach, show/prefix/children/tree/multiple, board CRUD/positions, note lifecycle including deleted/restore, work-session list/show/current/start/end, TDQ fields/hierarchy/comments, ranked log search, list filters/TDQ, info statistics, CLI create/dependency/blocks and dep add/rm/query, files read/link/unlink, deleted listing/write/reason, workflow status/field update/start/unstart/block/unblock/reopen, comments/log/handoff/review/reject/approve auto/all/close, last/undo, no local DB/token')
+                print('PASS: real backend init/reuse/worktree/attach, show/prefix/children/tree/multiple, board CRUD/positions, note lifecycle including deleted/restore, work-session lifecycle/tag/untag, TDQ fields/hierarchy/comments, ranked log search, list filters/TDQ, info statistics, CLI create/dependency/blocks and dep add/rm/query, files read/link/unlink, deleted listing/write/reason, workflow status/field update/start/unstart/block/unblock/reopen, comments/log/handoff/review/reject/approve auto/all/close, last/undo, no local DB/token')
             finally:
                 server.terminate()
                 try:

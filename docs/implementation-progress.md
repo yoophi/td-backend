@@ -1,10 +1,12 @@
 # 구현 진행 기록
 
-CLI `ws list/show/current/start/end`를 서버 Work Session API에 연결했습니다.
+CLI `ws list/show/current/start/end/tag/untag`를 서버 Work Session API에 연결했습니다.
 현재 Session의 active Work Session만 `current`로 선택하고, start/end는 Git
 commit과 durable intent를 사용합니다. CLI start는 이미 선택된 active Work
 Session이 있으면 거부합니다. 실제 서버 스모크에서 생성·현재 선택·종료를
-확인했습니다. tag 및 묶음 log/handoff는 후속입니다. SSE Hub 종료 시 대기 중인
+확인했습니다. tag는 기본적으로 열린 Issue를 시작하고, `--no-start`는 상태를
+유지합니다. 여러 Issue 시작 중 실패하면 앞서 성공한 ID를 표시하며 재시도는
+durable intent를 재사용합니다. 묶음 log/handoff는 후속입니다. SSE Hub 종료 시 대기 중인
 낡은 notice를 비워 구독자 채널이 즉시 종료 상태를 전달하도록 수정했습니다.
 
 CLI `note list/show/add/edit/delete/restore/pin/unpin/archive/unarchive`를 서버 Note
