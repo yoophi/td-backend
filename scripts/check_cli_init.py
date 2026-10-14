@@ -310,11 +310,28 @@ def main():
                     capture_output=True, text=True, timeout=30)
                 assert forced_start.returncode == 0
                 assert json.loads(forced_start.stdout)['status'] == 'in_progress'
+                def cli_direct(action, issue_id):
+                    result = subprocess.run([args.cli, '--work-dir', str(repo),
+                        action, issue_id, '--reason=direct workflow smoke', '--json'],
+                        env=env, capture_output=True, text=True, timeout=30)
+                    if result.returncode:
+                        raise RuntimeError(result.stdout + result.stderr)
+                    return json.loads(result.stdout)
+                assert cli_direct('block', work['id'])['status'] == 'blocked'
+                assert cli_direct('block', work['id'])['noop']
+                assert cli_direct('unblock', work['id'])['status'] == 'open'
+                assert cli_direct('unblock', work['id'])['noop']
+                ready_to_close = show(work['id'])
+                closed = post(base + '/issues/' + work['id'] + '/close', {'admin_reason':'smoke fixture'},
+                    ready_to_close['revision'])['issue']
+                assert closed['status'] == 'closed'
+                assert cli_direct('reopen', work['id'])['status'] == 'open'
+                assert cli_direct('reopen', work['id'])['noop']
                 for directory in (repo, attached):
                     assert not (directory / '.todos/issues.db').exists(), 'local SQLite fallback'
                     config = (directory / '.todos/config.json').read_text()
                     assert token not in config, 'token persisted in config'
-                print('PASS: real backend init/reuse/worktree/attach, show/prefix/children/tree/multiple, TDQ fields/hierarchy/comments, ranked log search, list filters/TDQ, info statistics, CLI create/dependency/blocks, deleted listing/write/reason, workflow status/field update/start/unstart, no local DB/token')
+                print('PASS: real backend init/reuse/worktree/attach, show/prefix/children/tree/multiple, TDQ fields/hierarchy/comments, ranked log search, list filters/TDQ, info statistics, CLI create/dependency/blocks, deleted listing/write/reason, workflow status/field update/start/unstart/block/unblock/reopen, no local DB/token')
             finally:
                 server.terminate()
                 try:

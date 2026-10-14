@@ -380,3 +380,7 @@ CLI `update`의 제목·description/acceptance 및 파일 입력·append·type·
 CLI `start`와 ID 지정 `unstart`를 backend workflow action에 연결했습니다. 각 Issue의 관측 revision과 요청 key를 저장하며 응답의 ID·상태·implementer Session을 검증합니다. 반복 실행에서는 자기 Session의 진행 중 Issue 또는 claim 없는 open Issue를 noop으로 처리합니다. 여러 Issue 처리 중 실패하면 완료 범위를 보고합니다. `unstart --session/--stale` sweep은 미연결이므로 실행 전 명시적으로 실패합니다.
 
 실제 서버 smoke에서 start→unstart, 반복 noop, blocked Issue의 일반 start 거부와 `--force` start 허용을 검증했습니다. 기존 init 회귀에서 이제 지원하는 start를 미연결 명령 목록에서 제거하고 close guard는 유지했습니다.
+
+## gh-16 진행 — block/unblock/reopen
+
+기존 backend transition adapter를 `block`, `unblock`, `reopen`에 연결했습니다. 명령별 대상 상태를 검증하고 관측 revision/key로 변경합니다. 이미 대상 상태이면 noop으로 처리해 다중 Issue 부분 성공의 재실행을 돕습니다. 실제 서버 smoke에서 block/unblock 및 관리자가 닫은 Issue의 reopen과 각 noop을 확인했습니다.
