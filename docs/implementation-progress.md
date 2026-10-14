@@ -328,3 +328,11 @@ gh-14는 실제 acceptance를 대조한 self-review로 승인·종료했고 gh-1
 프로젝트 통계 명령인 info도 remote stats 및 review buckets를 일관된 compound read로 연결했습니다. 로컬 DB를 표시하지 않고 store/URL/Project/Session을 표시합니다. total/grouping 필드가 없는 성공 응답을 0건 통계로 표시하지 않고 거절합니다. 목록 필터·hierarchy/TDQ·상세 로그·review 분류와 통계 JSON 회귀가 race/vet를 통과했습니다. 실제 backend SQLite smoke에서도 type/parent/epic/comment TDQ/sort/limit 목록과 info의 total/type/Project 연결을 확인했습니다.
 
 CLI workflow/history/Undo 및 monitor/serve 전체 연결은 gh-16~19에서 계속 진행합니다.
+
+## gh-15 완료 및 gh-16 durable write intent 기반
+
+gh-15는 실제 acceptance와 Reader/Client/CLI 읽기 경로를 대조한 self-review로 승인·종료했습니다. 패키지 race/vet 및 실제 backend SQLite CLI smoke의 list/show/query/search/info 검증과 각 commit/push를 handoff에 기록했습니다. gh-16의 쓰기/Workflow/History/Undo 연결을 시작합니다.
+
+backendstore.RunIntent는 semantic invocation의 hash별 요청을 사용자 config의 Session-scoped operations 디렉터리에 저장합니다. HTTP 전에 UUIDv4 key/method/resource/observed revision/JSON body를 0600 파일에 원자 기록합니다. pending 요청은 준비 함수를 다시 호출하지 않고 기존 payload/revision/key로 receipt를 복구합니다. verified success 또는 definite 4xx 이후 새 실행은 fresh request를 준비하고, 완료 전에 시작된 concurrent 실행은 원래 receipt를 사용합니다. network/decode/response verification 또는 완료 기록 실패는 uncertain으로 남겨 성공으로 보고하지 않습니다. 파일 lock 동안 HTTP나 prepare를 실행하지 않습니다.
+
+응답 유실·immutable read-modify-write 복구, 검증 실패, 로컬 완료 저장 실패, stale의 무재시도/새 실행 reobserve, concurrent prepare 이후 이미 완료된 receipt 복구 회귀가 race/vet를 통과했습니다. 응답 decode는 fresh value에 수행하여 이전 성공 값이 required field 누락을 가리지 않게 했고 해당 uncertain/recovery 회귀를 추가했습니다. 기존 읽기 CLI race 회귀도 통과했습니다. 실제 create/update/workflow 등 명령 연결은 다음 gh-16 작업 단위입니다.
