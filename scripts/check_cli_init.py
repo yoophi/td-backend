@@ -82,9 +82,9 @@ def main():
                             '--project-id=' + project)['backend']['project_id'] == project
                 init(repo, '--project-id=prj_0199dc38-1200-7000-8000-000000000001', success=False)
                 init(repo, '--project-id=invalid', success=False)
-                def post(path, body, revision=None):
+                def post(path, body, revision=None, method="POST"):
                     request = urllib.request.Request(endpoint + path,
-                        data=json.dumps(body).encode(), method='POST', headers={
+                        data=None if body is None else json.dumps(body).encode(), method=method, headers={
                             'Authorization': 'Bearer ' + token,
                             'Content-Type': 'application/json',
                             'Idempotency-Key': str(uuid.uuid4()),
@@ -188,11 +188,21 @@ def main():
                 parent_detail = show(parent)
                 assert any(edge['depends_on_id'] == created['id'] for edge in parent_detail['dependencies'])
                 assert parent_detail['revision'] == 'r-2'
+                tombstone = post(base + '/issues', {'title': 'Deleted CLI read fixture',
+                    'type': 'task', 'priority': 'P2'})['issue']
+                post(base + '/issues/' + tombstone['id'], None, tombstone['revision'], method='DELETE')
+                result = subprocess.run([args.cli, '--work-dir', str(repo),
+                    'deleted', '--json'], env=env, capture_output=True, text=True, timeout=30)
+                if result.returncode:
+                    raise RuntimeError(result.stderr)
+                deleted = json.loads(result.stdout)
+                assert len(deleted) == 1 and deleted[0]['id'] == tombstone['id']
+                assert deleted[0]['deleted_at']
                 for directory in (repo, attached):
                     assert not (directory / '.todos/issues.db').exists(), 'local SQLite fallback'
                     config = (directory / '.todos/config.json').read_text()
                     assert token not in config, 'token persisted in config'
-                print('PASS: real backend init/reuse/worktree/attach, show/prefix/children/tree/multiple, TDQ fields/hierarchy/comments, ranked log search, list filters/TDQ, info statistics, CLI create/dependency/blocks, no local DB/token')
+                print('PASS: real backend init/reuse/worktree/attach, show/prefix/children/tree/multiple, TDQ fields/hierarchy/comments, ranked log search, list filters/TDQ, info statistics, CLI create/dependency/blocks, deleted listing, no local DB/token')
             finally:
                 server.terminate()
                 try:

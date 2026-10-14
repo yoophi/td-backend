@@ -350,3 +350,9 @@ Incoming --blocks는 기존 Issue의 관계도 변경해야 하므로 원자 처
 생성 API에 `blocks: [{issue_id, revision}]`와 `create_blocks` capability를 추가했습니다. 새 Issue와 모든 대상의 관계·revision·review supersession·audit·Undo effect를 한 transaction에 저장합니다. 기존 생성 요청의 fingerprint를 유지하도록 비어 있는 blocks는 직렬화에서 제외합니다. CLI는 일관된 snapshot에서 ID prefix와 revision을 해석하고 immutable intent에 저장합니다.
 
 대상 중 하나의 stale revision, outgoing dependency와의 순환, 중복 대상에서 전체 rollback을 검증했습니다. 같은 key의 정확한 receipt 재생, 생성 Issue 및 복수 대상의 Undo도 HTTP/SQLite 회귀로 검증했습니다. Backend 전체 race/vet, OpenAPI와 GUI 계약 검사, CLI create/init race 및 vet, 실제 서버 CLI smoke가 통과했습니다. 이전 단위에서 미지원이던 incoming --blocks를 연결했으며, gh-16의 나머지 변경 명령은 계속 진행합니다.
+
+## gh-16 진행 — 삭제된 Issue 조회
+
+CLI `deleted`를 원격 목록 API에 연결했습니다. closed를 포함한 전체 페이지를 change token으로 검증한 다음 deleted_at이 있는 Issue만 JSON/일반 출력으로 전달합니다. 복원 준비에 필요한 개별 삭제 Issue 조회도 revision을 보존하는 Client 메서드로 추가했습니다. 조회 실패에서는 부분 결과를 출력하지 않습니다.
+
+Client 전체 race, CLI deleted routing/필터/오류 출력 race, vet 및 실제 Go/SQLite 서버 smoke가 통과했습니다. CLI commit은 `7125239`입니다. 삭제·복원 쓰기 자체와 사유 기록, 복수 Issue의 부분 완료 복구는 아직 미연결입니다.
