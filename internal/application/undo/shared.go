@@ -120,6 +120,26 @@ func prepare(tx port.TxScope, c domain.Caller, effect port.Effect, key, reason s
 			}
 			return nil, inverse(command, c, effect, before, target, target.Focus.Revision)
 		}, nil
+	case "work_session_log":
+		current, e := tx.WorkSessions().GetLogArchived(tx.Context(), c.ProjectID, effect.EntityID)
+		if e != nil {
+			return nil, e
+		}
+		if current.SessionID != c.SessionID {
+			return nil, domain.ErrForbidden
+		}
+		if e = observed(effect, current.Revision); e != nil {
+			return nil, e
+		}
+		before := current
+		return func(command operation.CommandContext) (*domain.Issue, error) {
+			current.DeletedAt = &command.Now
+			current.Revision++
+			if e := command.Tx.WorkSessionWrites().SaveLog(command.Tx.Context(), c.ProjectID, current, before.Revision, command.RowID); e != nil {
+				return nil, e
+			}
+			return nil, inverse(command, c, effect, before, current, current.Revision)
+		}, nil
 	case "work_session":
 		current, e := tx.WorkSessions().GetArchived(tx.Context(), c.ProjectID, effect.EntityID)
 		if e != nil {

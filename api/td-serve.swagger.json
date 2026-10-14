@@ -5437,6 +5437,187 @@
         ]
       }
     },
+    "/v1/work-sessions/{work_session_id}/logs": {
+      "get": {
+        "operationId": "listWorkSessionLogs",
+        "tags": [
+          "Sessions"
+        ],
+        "summary": "Read work session logs",
+        "description": "Includes logs recorded without a tagged issue. Undo hides a log while retaining its audit row.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "logs": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/LogDTO"
+                          }
+                        }
+                      },
+                      "required": [
+                        "logs"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "ok",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error401"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error409"
+          },
+          "500": {
+            "$ref": "#/components/responses/Error500"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error503"
+          }
+        },
+        "x-origin": "proposed",
+        "parameters": [
+          {
+            "name": "work_session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ]
+      },
+      "post": {
+        "operationId": "appendWorkSessionLog",
+        "tags": [
+          "Sessions"
+        ],
+        "summary": "Log work session progress",
+        "description": "Records one log under the owning active work session even when it has no tagged issues; the operation has an idempotent receipt and supports conditional undo.",
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "log": {
+                          "$ref": "#/components/schemas/LogDTO"
+                        }
+                      },
+                      "required": [
+                        "log"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "ok",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error401"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error409"
+          },
+          "500": {
+            "$ref": "#/components/responses/Error500"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error503"
+          }
+        },
+        "x-origin": "proposed",
+        "parameters": [
+          {
+            "name": "work_session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "message": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "type": {
+                    "$ref": "#/components/schemas/LogType"
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "message",
+                  "type"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/work-sessions/{work_session_id}/issues": {
       "put": {
         "operationId": "tagWorkSessionIssues",

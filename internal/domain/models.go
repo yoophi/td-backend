@@ -236,6 +236,18 @@ type WorkSessionIssue struct {
 	TaggedAt      time.Time `json:"tagged_at"`
 }
 
+// WorkSessionLog records progress even when no Issue is tagged.
+type WorkSessionLog struct {
+	ID            string     `json:"id"`
+	WorkSessionID string     `json:"work_session_id"`
+	SessionID     string     `json:"session_id"`
+	Revision      int64      `json:"revision_number"`
+	Message       string     `json:"message"`
+	Type          LogType    `json:"type"`
+	Timestamp     time.Time  `json:"timestamp"`
+	DeletedAt     *time.Time `json:"deleted_at,omitempty"`
+}
+
 // Board represents a named view into issues with custom ordering
 type Board struct {
 	Revision     int64      `json:"revision_number"`

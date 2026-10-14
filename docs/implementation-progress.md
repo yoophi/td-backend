@@ -3,18 +3,19 @@
 CLI `ws list/show/current/start/end/tag/untag/log`를 서버 Work Session 및 Issue
 Log API에 연결했습니다. `ws log`는 현재 태그된 Issue에 각각 같은 메시지를
 기록하고 `--only`로 대상 Issue를 지정할 수 있습니다. 각 기록은 독립적인
-durable intent로 재시도하며 Work Session ID로 귀속합니다. 현재 서버는
-Issue 없는 Work Session 전용 로그 저장을 지원하지 않아 태그 없이 `ws log`를
-실행하면 대상 Issue를 지정하라는 오류를 반환합니다.
+durable intent로 재시도하며 Work Session ID로 귀속합니다. 태그가 없는
+`ws log`는 별도의 Work Session 로그 API에 저장되어 이후 조회와 Undo가
+가능합니다.
 Work Session별 활동 조회 API는 당시 태그가 해제되었거나 Issue가 나중에
 삭제되어도 해당 Session ID로 기록된 활동을 돌려줍니다. CLI `ws current/show`
-JSON의 `activities` 및 사람이 읽는 최근 활동에 사용합니다.
+JSON의 `activities` 및 사람이 읽는 최근 활동에 사용합니다. 전용 Work
+Session 로그도 함께 병합해 보여줍니다.
 현재 Session의 active Work Session만 `current`로 선택하고, start/end는 Git
 commit과 durable intent를 사용합니다. CLI start는 이미 선택된 active Work
 Session이 있으면 거부합니다. 실제 서버 스모크에서 생성·현재 선택·종료를
 확인했습니다. tag는 기본적으로 열린 Issue를 시작하고, `--no-start`는 상태를
 유지합니다. 여러 Issue 시작 중 실패하면 앞서 성공한 ID를 표시하며 재시도는
-durable intent를 재사용합니다. Work Session 전용 로그와 묶음 handoff는 후속입니다. SSE Hub 종료 시 대기 중인
+durable intent를 재사용합니다. 묶음 handoff는 후속입니다. SSE Hub 종료 시 대기 중인
 낡은 notice를 비워 구독자 채널이 즉시 종료 상태를 전달하도록 수정했습니다.
 
 CLI `note list/show/add/edit/delete/restore/pin/unpin/archive/unarchive`를 서버 Note

@@ -16,6 +16,11 @@ type LogDTO struct {
 	Type          domain.LogType `json:"type"`
 	Timestamp     time.Time      `json:"timestamp"`
 }
+
+func WorkSessionLogDTOFrom(log domain.WorkSessionLog) LogDTO {
+	return LogDTO{log.ID, "", log.SessionID, log.WorkSessionID, log.Message, log.Type, log.Timestamp}
+}
+
 type HandoffDTO struct {
 	ID        string    `json:"id"`
 	IssueID   string    `json:"issue_id"`

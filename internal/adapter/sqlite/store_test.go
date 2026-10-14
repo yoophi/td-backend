@@ -45,7 +45,7 @@ func TestMigrationAndEveryConnectionSettings(t *testing.T) {
 	ctx := context.Background()
 	t.Log("embedded SQLite", s.Version())
 	var count int
-	if err := s.writer.QueryRowContext(ctx, "SELECT count(*) FROM sqlite_master WHERE type='table'").Scan(&count); err != nil || count != 22 {
+	if err := s.writer.QueryRowContext(ctx, "SELECT count(*) FROM sqlite_master WHERE type='table'").Scan(&count); err != nil || count != 23 {
 		t.Fatalf("tables %d: %v", count, err)
 	}
 	s.writer.SetConnMaxLifetime(time.Nanosecond)

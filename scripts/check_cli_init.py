@@ -200,6 +200,10 @@ def main():
                 started_ws = cli_ws('start', 'CLI work session')['work_session']
                 assert started_ws['name'] == 'CLI work session'
                 assert cli_ws('current')['work_session']['id'] == started_ws['id']
+                session_log = cli_ws('log', 'Planning before tags', '--decision')['logs']
+                assert len(session_log) == 1 and session_log[0]['issue_id'] == ''
+                assert session_log[0]['work_session_id'] == started_ws['id']
+                assert cli_ws('current')['activities'][0]['message'] == 'Planning before tags'
                 assert cli_ws('tag', parent, '--no-start')['issues'] == [parent]
                 assert parent in cli_ws('current')['issues']
                 ws_log = cli_ws('log', 'Shared progress')['logs']
@@ -215,7 +219,7 @@ def main():
                 shared_logs = cli_ws('log', 'Both issues have progress')['logs']
                 assert {log['issue_id'] for log in shared_logs} == {parent, child}
                 assert all(log['work_session_id'] == started_ws['id'] for log in shared_logs)
-                assert len(cli_ws('current')['activities']) == 4
+                assert len(cli_ws('current')['activities']) == 5
                 assert cli_ws('untag', child)['issues'] == [child]
                 assert cli_ws('current')['issues'] == [parent]
                 assert cli_ws('untag', parent)['issues'] == [parent]
@@ -229,7 +233,7 @@ def main():
                 assert unstart_child.returncode == 0, unstart_child.stderr
                 ended_ws = cli_ws('end')['work_session']
                 assert ended_ws['id'] == started_ws['id'] and ended_ws['ended_at']
-                assert len(cli_ws('show', started_ws['id'])['activities']) == 4
+                assert len(cli_ws('show', started_ws['id'])['activities']) == 5
                 assert cli_ws('current')['work_session'] is None
                 post(base + '/issues/' + child + '/comments', {'text': 'ready for remote query'}, show(child)['revision'])
                 def query(expression):

@@ -15,7 +15,13 @@ func (r workflowRepo) Counts(ctx context.Context, project string) (port.Activity
 		return out, e
 	}
 	best := 0
-	e := queryRepo{r.scope}.rows(ctx, `SELECT session_id,SUM(CASE WHEN kind='log' THEN 1 ELSE 0 END),SUM(CASE WHEN kind='handoff' THEN 1 ELSE 0 END) FROM activities WHERE project_id=? AND deleted_at IS NULL AND kind IN ('log','handoff') GROUP BY session_id ORDER BY session_id`, project, func(row *sql.Rows) error {
+	e := queryRepo{r.scope}.rows(ctx, `WITH target AS (SELECT ? AS id)
+    SELECT session_id,SUM(logs),SUM(handoffs) FROM (
+        SELECT session_id,CASE WHEN kind='log' THEN 1 ELSE 0 END AS logs,CASE WHEN kind='handoff' THEN 1 ELSE 0 END AS handoffs
+        FROM activities WHERE project_id=(SELECT id FROM target) AND deleted_at IS NULL AND kind IN ('log','handoff')
+        UNION ALL
+        SELECT session_id,1 AS logs,0 AS handoffs FROM work_session_logs WHERE project_id=(SELECT id FROM target) AND deleted_at IS NULL
+    ) GROUP BY session_id ORDER BY session_id`, project, func(row *sql.Rows) error {
 		var session string
 		var logs, handoffs int
 		if e := row.Scan(&session, &logs, &handoffs); e != nil {

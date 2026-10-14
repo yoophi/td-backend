@@ -36,6 +36,9 @@ func TestUndoMigrationPreservesVersionOneWorkSession(t *testing.T) {
 	if _, e = db.Exec(`INSERT INTO actors(id,name,created_at) VALUES('a','actor','2026-10-13T00:00:00Z'); INSERT INTO projects(id,name,created_at) VALUES('p','project','2026-10-13T00:00:00Z'); INSERT INTO sessions(project_id,id,actor_id,context_id,started_at,last_activity) VALUES('p','s','a','context','2026-10-13T00:00:00Z','2026-10-13T00:00:00Z'); INSERT INTO work_sessions(project_id,id,session_id,name,started_at,start_sha) VALUES('p','ws-old','s','Existing work','2026-10-13T00:00:00Z','original');`); e != nil {
 		t.Fatal(e)
 	}
+	if _, e = db.Exec(`INSERT INTO operations(row_id,project_id,actor_id,session_id,scope_key,operation_id,fingerprint,command_kind,request_method,request_path,representation_version,response_status,response_headers,response_body,created_at) VALUES('op-old','p','a','s','p','018e77ae-9b30-4b1f-9c10-377928639abc',X'01','focus.set','PUT','/focus',1,200,'{}',X'7B7D','2026-10-13T00:00:00Z'); INSERT INTO operation_effects(project_id,operation_row_id,entity_kind,entity_id,after_revision,state_version,before_json,after_json) VALUES('p','op-old','focus','s','r-1',1,NULL,'{}');`); e != nil {
+		t.Fatal(e)
+	}
 	if e = db.Close(); e != nil {
 		t.Fatal(e)
 	}
@@ -45,8 +48,12 @@ func TestUndoMigrationPreservesVersionOneWorkSession(t *testing.T) {
 	}
 	defer s.Close()
 	var version int
-	if e = s.writer.QueryRow(`SELECT max(version) FROM schema_migrations`).Scan(&version); e != nil || version != 3 {
+	if e = s.writer.QueryRow(`SELECT max(version) FROM schema_migrations`).Scan(&version); e != nil || version != 4 {
 		t.Fatal(version, e)
+	}
+	var kind string
+	if e = s.writer.QueryRow(`SELECT entity_kind FROM operation_effects WHERE operation_row_id='op-old'`).Scan(&kind); e != nil || kind != "focus" {
+		t.Fatal("preexisting effect lost during migration", kind, e)
 	}
 	now := time.Now().UTC()
 	if e = s.Write(context.Background(), func(tx port.TxScope) error {

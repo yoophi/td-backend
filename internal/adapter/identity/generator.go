@@ -62,7 +62,7 @@ func (g Generator) ID(kind string) (string, error) {
 		}
 		return "ses_" + s, nil
 	default:
-		prefix := map[string]string{"board": "bd-", "issue": "td-", "note": "nt-", "review": "rv-", "activity": "act-", "work_session": "ws-", "file": "ifl_", "dependency": "dep_"}[kind]
+		prefix := map[string]string{"board": "bd-", "issue": "td-", "note": "nt-", "review": "rv-", "activity": "act-", "work_session": "ws-", "work_session_log": "wsl-", "file": "ifl_", "dependency": "dep_"}[kind]
 		if prefix == "" {
 			return "", fmt.Errorf("unknown entity kind %q", kind)
 		}

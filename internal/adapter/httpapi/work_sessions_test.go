@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/yoophi/td-backend/internal/adapter/httpapi/receiptcodec"
@@ -82,6 +83,72 @@ func TestWorkSessionActivityRetainsUntaggedAndDeletedIssueHistory(t *testing.T) 
 	status, _, data = issueRequest(t, h, "GET", base+"/"+ws.ID+"/activity?unexpected=1", session, "", "", "")
 	if status != 400 {
 		t.Fatal(status, string(data))
+	}
+}
+
+func TestWorkSessionLogWithoutTaggedIssueReplayAndUndo(t *testing.T) {
+	h, project, session := issueSetup(t)
+	root := "/v1/projects/" + project
+	base := root + "/work-sessions"
+	status, _, data := issueRequest(t, h, "POST", base, session, key(t), "", `{"name":"Untargeted progress"}`)
+	if status != 201 {
+		t.Fatal(status, string(data))
+	}
+	ws := workSessionFrom(t, data)
+	path := base + "/" + ws.ID + "/logs"
+	status, _, data = issueRequest(t, h, "GET", path, session, "", "", "")
+	if status != 200 || !strings.Contains(string(data), `"logs":[]`) {
+		t.Fatal(status, string(data))
+	}
+	status, otherData := h.request("POST", root+"/sessions", testToken, key(t), "", `{"context_id":"other-log-writer"}`)
+	if status != 201 {
+		t.Fatal(status, string(otherData))
+	}
+	other := sessionFrom(t, otherData).ID
+	for _, tc := range []struct {
+		caller, body string
+		want         int
+	}{{other, `{"message":"Foreign","type":"progress"}`, 403}, {session, `{"message":" ","type":"progress"}`, 400}, {session, `{"message":"Invalid","type":"other"}`, 400}} {
+		status, _, data = issueRequest(t, h, "POST", path, tc.caller, key(t), "", tc.body)
+		if status != tc.want {
+			t.Fatal(status, string(data))
+		}
+	}
+	op := key(t)
+	body := `{"message":" No issues tagged yet ","type":"decision"}`
+	status, _, first := issueRequest(t, h, "POST", path, session, op, "", body)
+	if status != 201 {
+		t.Fatal(status, string(first))
+	}
+	var result struct {
+		Data struct {
+			Log receiptcodec.LogDTO `json:"log"`
+		} `json:"data"`
+	}
+	if e := json.Unmarshal(first, &result); e != nil || result.Data.Log.IssueID != "" || result.Data.Log.WorkSessionID != ws.ID || result.Data.Log.SessionID != session || result.Data.Log.Message != "No issues tagged yet" || result.Data.Log.Type != domain.LogTypeDecision {
+		t.Fatal(string(first), e)
+	}
+	if stats := statsFrom(t, h, project, session); stats.TotalLogs != 1 || stats.MostActiveSession != session {
+		t.Fatal("work-session log missing from statistics", stats)
+	}
+	status, _, data = issueRequest(t, h, "POST", path, session, op, "", body)
+	if status != 201 || string(data) != string(first) {
+		t.Fatal("log replay changed", status, string(data))
+	}
+	status, _, data = issueRequest(t, h, "GET", path, other, "", "", "")
+	if status != 200 || !strings.Contains(string(data), result.Data.Log.ID) {
+		t.Fatal(status, string(data))
+	}
+	status, _, data = issueRequest(t, h, "POST", root+"/operations/"+op+"/undo", session, key(t), "", `{"reason":"Correct work-session note"}`)
+	if status != 200 {
+		t.Fatal(status, string(data))
+	}
+	status, _, data = issueRequest(t, h, "GET", path, session, "", "", "")
+	if status != 200 || !strings.Contains(string(data), `"logs":[]`) {
+		t.Fatal(status, string(data))
+	}
+	if stats := statsFrom(t, h, project, session); stats.TotalLogs != 0 {
+		t.Fatal("undone work-session log remains in statistics", stats)
 	}
 }
 func TestWorkSessionOwnerTagsEndAndAtomicity(t *testing.T) {

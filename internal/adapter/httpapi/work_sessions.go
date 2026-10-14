@@ -61,6 +61,42 @@ func registerWorkSessions(mux *http.ServeMux, svc *worksession.Service, protect 
 			Activity []receiptcodec.ActivityDTO `json:"activity"`
 		}{result})
 	}))
+	mux.HandleFunc("GET "+base+"/{work_session_id}/logs", protect(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.RawQuery != "" {
+			writeError(w, invalid("query", "no query parameters supported"))
+			return
+		}
+		logs, e := svc.ListLogs(r.Context(), caller(r), r.PathValue("work_session_id"))
+		if e != nil {
+			writeError(w, e)
+			return
+		}
+		result := make([]receiptcodec.LogDTO, 0, len(logs))
+		for _, log := range logs {
+			result = append(result, receiptcodec.WorkSessionLogDTOFrom(log))
+		}
+		writeSuccess(w, 200, struct {
+			Logs []receiptcodec.LogDTO `json:"logs"`
+		}{result})
+	}))
+	mux.HandleFunc("POST "+base+"/{work_session_id}/logs", protect(func(w http.ResponseWriter, r *http.Request) {
+		var cmd worksession.LogCommand
+		if e := decode(w, r, &cmd); e != nil {
+			writeError(w, e)
+			return
+		}
+		m, e := mutation(r, cmd)
+		if e != nil {
+			writeError(w, e)
+			return
+		}
+		reply, e := svc.Log(r.Context(), caller(r), m, r.PathValue("work_session_id"), cmd)
+		if e != nil {
+			writeError(w, e)
+			return
+		}
+		writeReply(w, reply)
+	}))
 	mux.HandleFunc("POST "+base, protect(func(w http.ResponseWriter, r *http.Request) {
 		var cmd worksession.StartCommand
 		if e := decode(w, r, &cmd); e != nil {

@@ -64,6 +64,14 @@ func (Codec) Encode(kind string, outcome any) (port.StoredReply, error) {
 				IssueIDs []string `json:"issue_ids"`
 			}{WorkSessionIssueIDs(result.State)}
 		}
+	case "work_session.log":
+		result, ok := outcome.(worksession.LogResult)
+		if !ok {
+			return port.StoredReply{}, fmt.Errorf("invalid work session log outcome")
+		}
+		outcome = struct {
+			Log LogDTO `json:"log"`
+		}{WorkSessionLogDTOFrom(result.Log)}
 
 	case "note.create", "note.update", "note.delete", "note.restore":
 		result, ok := outcome.(note.Result)
