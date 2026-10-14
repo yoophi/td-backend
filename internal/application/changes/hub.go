@@ -82,6 +82,10 @@ func (h *Hub) Subscribe(ctx context.Context, c domain.Caller) (Subscription, Sna
 			}
 			delete(g.subscribers, id)
 			h.count--
+			select {
+			case <-ch:
+			default:
+			}
 			close(ch)
 			if len(g.subscribers) == 0 {
 				if h.groups[c.ProjectID] == g {
@@ -102,6 +106,10 @@ func (h *Hub) poll(project string, g *group) {
 			delete(h.groups, project)
 		}
 		for id, ch := range g.subscribers {
+			select {
+			case <-ch:
+			default:
+			}
 			close(ch)
 			delete(g.subscribers, id)
 			h.count--

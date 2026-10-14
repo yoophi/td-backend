@@ -197,6 +197,12 @@ def main():
                            for row in cli_ws('list'))
                 assert cli_ws('show', external_ws['id'])['work_session']['name'] == 'External work session'
                 assert cli_ws('current')['work_session'] is None
+                started_ws = cli_ws('start', 'CLI work session')['work_session']
+                assert started_ws['name'] == 'CLI work session'
+                assert cli_ws('current')['work_session']['id'] == started_ws['id']
+                ended_ws = cli_ws('end')['work_session']
+                assert ended_ws['id'] == started_ws['id'] and ended_ws['ended_at']
+                assert cli_ws('current')['work_session'] is None
                 post(base + '/issues/' + child + '/comments', {'text': 'ready for remote query'}, child_record['revision'])
                 def query(expression):
                     result = subprocess.run([args.cli, '--work-dir', str(repo),
@@ -582,7 +588,7 @@ def main():
                     assert not (directory / '.todos/issues.db').exists(), 'local SQLite fallback'
                     config = (directory / '.todos/config.json').read_text()
                     assert token not in config, 'token persisted in config'
-                print('PASS: real backend init/reuse/worktree/attach, show/prefix/children/tree/multiple, board CRUD/positions, note lifecycle including deleted/restore, work-session list/show/current, TDQ fields/hierarchy/comments, ranked log search, list filters/TDQ, info statistics, CLI create/dependency/blocks and dep add/rm/query, files read/link/unlink, deleted listing/write/reason, workflow status/field update/start/unstart/block/unblock/reopen, comments/log/handoff/review/reject/approve auto/all/close, last/undo, no local DB/token')
+                print('PASS: real backend init/reuse/worktree/attach, show/prefix/children/tree/multiple, board CRUD/positions, note lifecycle including deleted/restore, work-session list/show/current/start/end, TDQ fields/hierarchy/comments, ranked log search, list filters/TDQ, info statistics, CLI create/dependency/blocks and dep add/rm/query, files read/link/unlink, deleted listing/write/reason, workflow status/field update/start/unstart/block/unblock/reopen, comments/log/handoff/review/reject/approve auto/all/close, last/undo, no local DB/token')
             finally:
                 server.terminate()
                 try:
