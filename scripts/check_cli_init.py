@@ -402,11 +402,29 @@ def main():
                 assert cli_direct('review', direct['id'])['status'] == 'in_review'
                 assert cli_approve(direct['id'], '--self-review',
                     '--reason=Verified direct approval')['status'] == 'closed'
+                candidates = []
+                for n in range(2):
+                    candidate = post(base + '/issues', {
+                        'title': f'Approval candidate {n}', 'type': 'task'})['issue']['id']
+                    cli_direct('start', candidate)
+                    cli_comment('handoff', candidate, '--done=Ready for batch approval')
+                    cli_direct('review', candidate)
+                    candidates.append(candidate)
+                auto_approve = [args.cli, '--work-dir', str(repo), 'approve',
+                    '--self-review', '--reason=Verified batch approval', '--json']
+                ambiguous = subprocess.run(auto_approve, env=env,
+                    capture_output=True, text=True, timeout=30)
+                assert ambiguous.returncode != 0 and 'multiple issues' in (ambiguous.stdout + ambiguous.stderr)
+                batch = subprocess.run([*auto_approve, '--all'], env=env,
+                    capture_output=True, text=True, timeout=30)
+                assert batch.returncode == 0, batch.stdout + batch.stderr
+                assert sorted(json.loads(line)['id'] for line in batch.stdout.splitlines()) == sorted(candidates)
+                assert all(show(candidate)['status'] == 'closed' for candidate in candidates)
                 for directory in (repo, attached):
                     assert not (directory / '.todos/issues.db').exists(), 'local SQLite fallback'
                     config = (directory / '.todos/config.json').read_text()
                     assert token not in config, 'token persisted in config'
-                print('PASS: real backend init/reuse/worktree/attach, show/prefix/children/tree/multiple, TDQ fields/hierarchy/comments, ranked log search, list filters/TDQ, info statistics, CLI create/dependency/blocks, deleted listing/write/reason, workflow status/field update/start/unstart/block/unblock/reopen, comments/log/handoff/review/reject/approve/close, no local DB/token')
+                print('PASS: real backend init/reuse/worktree/attach, show/prefix/children/tree/multiple, TDQ fields/hierarchy/comments, ranked log search, list filters/TDQ, info statistics, CLI create/dependency/blocks, deleted listing/write/reason, workflow status/field update/start/unstart/block/unblock/reopen, comments/log/handoff/review/reject/approve auto/all/close, no local DB/token')
             finally:
                 server.terminate()
                 try:
