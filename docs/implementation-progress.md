@@ -1,5 +1,9 @@
 # 구현 진행 기록
 
+CLI `ws list/show/current`를 서버 Work Session 조회에 연결했습니다. 현재 Session의
+active Work Session만 `current`로 선택하고, 목록/상세의 tagged Issue IDs를
+실제 서버 스모크에서 확인했습니다. 생성·tag·end 및 묶음 log/handoff는 후속입니다.
+
 CLI `note list/show/add/edit/delete/restore/pin/unpin/archive/unarchive`를 서버 Note
 API로 연결했습니다. 검색·pin/archive·limit 필터와 JSON 출력은 CLI에서
 적용하며, 변경은 관측 revision과 durable intent를 사용합니다. 실제 서버
