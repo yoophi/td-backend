@@ -279,6 +279,15 @@ def main():
                 assert show(another['id'])['revision'] == revision_after_partial
                 work = post(base + '/issues', {'title': 'Workflow CLI fixture',
                     'type': 'task'})['issue']
+                (repo / 'backend-linked.go').write_text('package fixture\n')
+                post(base + '/issues/' + work['id'] + '/files', {
+                    'files': [{'file_path': 'backend-linked.go',
+                               'role': 'implementation'}]}, work['revision'], method='PUT')
+                linked = subprocess.run([args.cli, '--work-dir', str(repo),
+                    'files', work['id'], '--json'], env=env,
+                    capture_output=True, text=True, timeout=30)
+                assert linked.returncode == 0, linked.stdout + linked.stderr
+                assert json.loads(linked.stdout)[0]['file_path'] == 'backend-linked.go'
                 def cli_dependency(*tail):
                     result = subprocess.run([args.cli, '--work-dir', str(repo),
                         'dep', *tail, '--json'], env=env, capture_output=True,
@@ -451,7 +460,7 @@ def main():
                     assert not (directory / '.todos/issues.db').exists(), 'local SQLite fallback'
                     config = (directory / '.todos/config.json').read_text()
                     assert token not in config, 'token persisted in config'
-                print('PASS: real backend init/reuse/worktree/attach, show/prefix/children/tree/multiple, TDQ fields/hierarchy/comments, ranked log search, list filters/TDQ, info statistics, CLI create/dependency/blocks and dep add/rm/query, deleted listing/write/reason, workflow status/field update/start/unstart/block/unblock/reopen, comments/log/handoff/review/reject/approve auto/all/close, no local DB/token')
+                print('PASS: real backend init/reuse/worktree/attach, show/prefix/children/tree/multiple, TDQ fields/hierarchy/comments, ranked log search, list filters/TDQ, info statistics, CLI create/dependency/blocks and dep add/rm/query, files read, deleted listing/write/reason, workflow status/field update/start/unstart/block/unblock/reopen, comments/log/handoff/review/reject/approve auto/all/close, no local DB/token')
             finally:
                 server.terminate()
                 try:

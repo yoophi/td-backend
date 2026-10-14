@@ -416,3 +416,7 @@ CLI `dep add`와 `dep rm`을 backend의 관계 추가·삭제 API에 연결했�
 ## gh-16 진행 — 관계 조회
 
 CLI `dep <id>`, `depends-on <id>`, `blocked-by <id>`가 일관된 backend 스냅샷에서 관계 그래프를 읽습니다. 직접 의존·역방향 의존과 `blocked-by`의 전체 전이 도달 집합을 반환하고, 그래프를 읽는 동안 change token이 바뀌면 전체 조회를 다시 수행합니다. 실제 SQLite 서버 smoke에서 관계 추가 전후의 직접·역방향 조회와 제거 후 빈 목록을 확인했습니다. `critical-path`와 `tree`는 후속 연결 대상입니다.
+
+## gh-16 진행 — files 조회
+
+CLI `files <id>`가 일관된 backend 상세 조회에서 연결 파일을 읽고, 기존 CLI의 로컬 파일 상태 비교를 사용해 변경 여부를 표시합니다. 실제 SQLite 서버 smoke에서 원격 연결 파일의 CLI 목록 조회를 확인했습니다. `link`/`unlink` 쓰기는 후속 작업입니다.
