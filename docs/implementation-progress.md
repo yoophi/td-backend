@@ -412,3 +412,7 @@ CLI `approve <id>`를 backend 승인·종료 workflow에 연결했습니다. `--
 ## gh-16 진행 — dep add/rm
 
 CLI `dep add`와 `dep rm`을 backend의 관계 추가·삭제 API에 연결했습니다. 대상 ID를 먼저 모두 확인하고, 각 관계별 관측 revision과 영속 요청 key를 사용합니다. 서버 `dep_id`를 읽어 삭제하며, 동일 관계를 다시 추가하거나 삭제하면 noop으로 처리합니다. 다중 대상 중 실패하면 앞서 완료한 ID를 보고합니다. 실제 SQLite 서버 smoke에서 추가·반복 추가·상세 조회·삭제·반복 삭제를 검증했습니다. `dep`, `depends-on`, `blocked-by` 등의 관계 조회는 후속 작업입니다.
+
+## gh-16 진행 — 관계 조회
+
+CLI `dep <id>`, `depends-on <id>`, `blocked-by <id>`가 일관된 backend 스냅샷에서 관계 그래프를 읽습니다. 직접 의존·역방향 의존과 `blocked-by`의 전체 전이 도달 집합을 반환하고, 그래프를 읽는 동안 change token이 바뀌면 전체 조회를 다시 수행합니다. 실제 SQLite 서버 smoke에서 관계 추가 전후의 직접·역방향 조회와 제거 후 빈 목록을 확인했습니다. `critical-path`와 `tree`는 후속 연결 대상입니다.

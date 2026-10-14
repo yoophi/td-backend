@@ -291,9 +291,21 @@ def main():
                 assert cli_dependency('add', work['id'], child)['already_exists']
                 assert any(dep['depends_on_id'] == child
                     for dep in show(work['id'])['dependencies'])
+                assert cli_dependency(work['id'])['dependencies'] == [child]
+                assert cli_dependency(work['id'], '--blocking')['blocked'] == []
+                def cli_relation(command, issue_id):
+                    result = subprocess.run([args.cli, '--work-dir', str(repo),
+                        command, issue_id, '--json'], env=env,
+                        capture_output=True, text=True, timeout=30)
+                    if result.returncode:
+                        raise RuntimeError(result.stdout + result.stderr)
+                    return json.loads(result.stdout)
+                assert cli_relation('depends-on', work['id'])['dependencies'] == [child]
+                assert work['id'] in cli_relation('blocked-by', child)['direct']
                 assert cli_dependency('rm', work['id'], child)['action'] == 'dependency_removed'
                 assert cli_dependency('rm', work['id'], child)['already_exists']
                 assert show(work['id'])['dependencies'] == []
+                assert cli_relation('depends-on', work['id'])['dependencies'] == []
                 def cli_workflow(action):
                     result = subprocess.run([args.cli, '--work-dir', str(repo),
                         action, work['id'], '--reason=workflow smoke', '--json'],
@@ -439,7 +451,7 @@ def main():
                     assert not (directory / '.todos/issues.db').exists(), 'local SQLite fallback'
                     config = (directory / '.todos/config.json').read_text()
                     assert token not in config, 'token persisted in config'
-                print('PASS: real backend init/reuse/worktree/attach, show/prefix/children/tree/multiple, TDQ fields/hierarchy/comments, ranked log search, list filters/TDQ, info statistics, CLI create/dependency/blocks and dep add/rm, deleted listing/write/reason, workflow status/field update/start/unstart/block/unblock/reopen, comments/log/handoff/review/reject/approve auto/all/close, no local DB/token')
+                print('PASS: real backend init/reuse/worktree/attach, show/prefix/children/tree/multiple, TDQ fields/hierarchy/comments, ranked log search, list filters/TDQ, info statistics, CLI create/dependency/blocks and dep add/rm/query, deleted listing/write/reason, workflow status/field update/start/unstart/block/unblock/reopen, comments/log/handoff/review/reject/approve auto/all/close, no local DB/token')
             finally:
                 server.terminate()
                 try:
