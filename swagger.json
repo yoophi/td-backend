@@ -5629,6 +5629,15 @@
           },
           {
             "$ref": "#/components/parameters/Session"
+          },
+          {
+            "name": "include_deleted",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            },
+            "description": "",
+            "in": "query"
           }
         ]
       },
@@ -5834,6 +5843,15 @@
           },
           {
             "$ref": "#/components/parameters/Session"
+          },
+          {
+            "name": "include_deleted",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            },
+            "description": "",
+            "in": "query"
           }
         ]
       },
@@ -6001,6 +6019,115 @@
                       },
                       "required": [
                         "deleted"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "ok",
+                    "data"
+                  ]
+                }
+              }
+            },
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Strong quoted aggregate revision."
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error401"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error409"
+          },
+          "500": {
+            "$ref": "#/components/responses/Error500"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error503"
+          },
+          "412": {
+            "$ref": "#/components/responses/Error412"
+          },
+          "428": {
+            "$ref": "#/components/responses/Error428"
+          }
+        },
+        "x-origin": "proposed",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ProjectID"
+            }
+          },
+          {
+            "name": "note_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          {
+            "$ref": "#/components/parameters/Session"
+          },
+          {
+            "$ref": "#/components/parameters/Operation"
+          },
+          {
+            "$ref": "#/components/parameters/Revision"
+          }
+        ]
+      }
+    },
+    "/v1/projects/{project_id}/notes/{note_id}/restore": {
+      "post": {
+        "operationId": "restoreNote",
+        "tags": [
+          "Notes"
+        ],
+        "summary": "Restore soft-deleted note",
+        "description": "Restore soft-deleted note",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "note": {
+                          "$ref": "#/components/schemas/Note"
+                        }
+                      },
+                      "required": [
+                        "note"
                       ]
                     }
                   },

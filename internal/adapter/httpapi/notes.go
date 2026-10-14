@@ -12,11 +12,17 @@ import (
 func registerNotes(mux *http.ServeMux, svc *note.Service, protect func(http.HandlerFunc) http.HandlerFunc, caller func(*http.Request) domain.Caller) {
 	const base = "/v1/projects/{project_id}/notes"
 	mux.HandleFunc("GET "+base, protect(func(w http.ResponseWriter, r *http.Request) {
-		if len(r.URL.Query()) > 0 {
-			writeError(w, invalid("query", "unexpected query parameter"))
+		includeDeleted, e := noteIncludeDeleted(r)
+		if e != nil {
+			writeError(w, e)
 			return
 		}
-		notes, e := svc.List(r.Context(), caller(r))
+		var notes []domain.Note
+		if includeDeleted {
+			notes, e = svc.ListIncludingDeleted(r.Context(), caller(r))
+		} else {
+			notes, e = svc.List(r.Context(), caller(r))
+		}
 		if e != nil {
 			writeError(w, e)
 			return
@@ -30,11 +36,17 @@ func registerNotes(mux *http.ServeMux, svc *note.Service, protect func(http.Hand
 		}{data})
 	}))
 	mux.HandleFunc("GET "+base+"/{note_id}", protect(func(w http.ResponseWriter, r *http.Request) {
-		if len(r.URL.Query()) > 0 {
-			writeError(w, invalid("query", "unexpected query parameter"))
+		includeDeleted, e := noteIncludeDeleted(r)
+		if e != nil {
+			writeError(w, e)
 			return
 		}
-		n, e := svc.Get(r.Context(), caller(r), r.PathValue("note_id"))
+		var n domain.Note
+		if includeDeleted {
+			n, e = svc.GetIncludingDeleted(r.Context(), caller(r), r.PathValue("note_id"))
+		} else {
+			n, e = svc.Get(r.Context(), caller(r), r.PathValue("note_id"))
+		}
 		if e != nil {
 			writeError(w, e)
 			return
@@ -98,4 +110,34 @@ func registerNotes(mux *http.ServeMux, svc *note.Service, protect func(http.Hand
 		}
 		writeReply(w, reply)
 	}))
+	mux.HandleFunc("POST "+base+"/{note_id}/restore", protect(func(w http.ResponseWriter, r *http.Request) {
+		body, e := io.ReadAll(http.MaxBytesReader(w, r.Body, 1))
+		if e != nil || len(body) != 0 {
+			writeError(w, invalid("body", "request body must be empty"))
+			return
+		}
+		m, e := mutation(r, struct{}{})
+		if e != nil {
+			writeError(w, e)
+			return
+		}
+		reply, e := svc.Restore(r.Context(), caller(r), m, r.PathValue("note_id"), r.Header.Get("If-Match"))
+		if e != nil {
+			writeError(w, e)
+			return
+		}
+		writeReply(w, reply)
+	}))
+}
+
+func noteIncludeDeleted(r *http.Request) (bool, error) {
+	query := r.URL.Query()
+	if len(query) == 0 {
+		return false, nil
+	}
+	values, ok := query["include_deleted"]
+	if len(query) != 1 || !ok || len(values) != 1 || (values[0] != "true" && values[0] != "false") {
+		return false, invalid("include_deleted", "expected include_deleted=true or false")
+	}
+	return values[0] == "true", nil
 }

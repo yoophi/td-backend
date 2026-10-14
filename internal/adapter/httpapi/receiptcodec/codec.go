@@ -65,7 +65,7 @@ func (Codec) Encode(kind string, outcome any) (port.StoredReply, error) {
 			}{WorkSessionIssueIDs(result.State)}
 		}
 
-	case "note.create", "note.update", "note.delete":
+	case "note.create", "note.update", "note.delete", "note.restore":
 		result, ok := outcome.(note.Result)
 		if !ok {
 			return port.StoredReply{}, fmt.Errorf("invalid note outcome")

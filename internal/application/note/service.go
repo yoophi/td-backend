@@ -46,25 +46,41 @@ func validate(n *domain.Note) error {
 	return nil
 }
 func (s *Service) List(ctx context.Context, c domain.Caller) ([]domain.Note, error) {
+	return s.list(ctx, c, false)
+}
+func (s *Service) ListIncludingDeleted(ctx context.Context, c domain.Caller) ([]domain.Note, error) {
+	return s.list(ctx, c, true)
+}
+func (s *Service) list(ctx context.Context, c domain.Caller, includeDeleted bool) ([]domain.Note, error) {
 	var result []domain.Note
 	e := s.Reads.Snapshot(ctx, func(read port.ReadSnapshot) error {
 		if e := access.Authorize(read.Context(), read, c, true, false); e != nil {
 			return e
 		}
 		var e error
-		result, e = read.Notes().List(read.Context(), c.ProjectID)
+		if includeDeleted {
+			result, e = read.Notes().ListIncludingDeleted(read.Context(), c.ProjectID)
+		} else {
+			result, e = read.Notes().List(read.Context(), c.ProjectID)
+		}
 		return e
 	})
 	return result, e
 }
 func (s *Service) Get(ctx context.Context, c domain.Caller, id string) (domain.Note, error) {
+	return s.get(ctx, c, id, false)
+}
+func (s *Service) GetIncludingDeleted(ctx context.Context, c domain.Caller, id string) (domain.Note, error) {
+	return s.get(ctx, c, id, true)
+}
+func (s *Service) get(ctx context.Context, c domain.Caller, id string, includeDeleted bool) (domain.Note, error) {
 	var result domain.Note
 	e := s.Reads.Snapshot(ctx, func(read port.ReadSnapshot) error {
 		if e := access.Authorize(read.Context(), read, c, true, false); e != nil {
 			return e
 		}
 		var e error
-		result, e = read.Notes().Get(read.Context(), c.ProjectID, id, false)
+		result, e = read.Notes().Get(read.Context(), c.ProjectID, id, includeDeleted)
 		return e
 	})
 	return result, e
@@ -89,7 +105,7 @@ func (s *Service) Create(ctx context.Context, c domain.Caller, m port.Mutation, 
 	})
 }
 func (s *Service) Patch(ctx context.Context, c domain.Caller, m port.Mutation, id, revision string, cmd PatchCommand) (port.StoredReply, error) {
-	return s.mutate(ctx, c, m, id, revision, "note.update", func(command operation.CommandContext, n *domain.Note) error {
+	return s.mutate(ctx, c, m, id, revision, "note.update", false, func(command operation.CommandContext, n *domain.Note) error {
 		if cmd.Title == nil && cmd.Content == nil && cmd.Pinned == nil && cmd.Archived == nil {
 			return invalid("body", "at least one field required")
 		}
@@ -109,15 +125,24 @@ func (s *Service) Patch(ctx context.Context, c domain.Caller, m port.Mutation, i
 	})
 }
 func (s *Service) Delete(ctx context.Context, c domain.Caller, m port.Mutation, id, revision string) (port.StoredReply, error) {
-	return s.mutate(ctx, c, m, id, revision, "note.delete", func(command operation.CommandContext, n *domain.Note) error { n.DeletedAt = &command.Now; return nil })
+	return s.mutate(ctx, c, m, id, revision, "note.delete", false, func(command operation.CommandContext, n *domain.Note) error { n.DeletedAt = &command.Now; return nil })
 }
-func (s *Service) mutate(ctx context.Context, c domain.Caller, m port.Mutation, id, revision, kind string, edit func(operation.CommandContext, *domain.Note) error) (port.StoredReply, error) {
+func (s *Service) Restore(ctx context.Context, c domain.Caller, m port.Mutation, id, revision string) (port.StoredReply, error) {
+	return s.mutate(ctx, c, m, id, revision, "note.restore", true, func(_ operation.CommandContext, n *domain.Note) error {
+		if n.DeletedAt == nil {
+			return domain.ErrConflict
+		}
+		n.DeletedAt = nil
+		return nil
+	})
+}
+func (s *Service) mutate(ctx context.Context, c domain.Caller, m port.Mutation, id, revision, kind string, includeDeleted bool, edit func(operation.CommandContext, *domain.Note) error) (port.StoredReply, error) {
 	return s.Runner.Run(ctx, c, m, kind, func(command operation.CommandContext) (any, error) {
 		expected, e := domain.Observe(revision)
 		if e != nil {
 			return nil, e
 		}
-		n, e := command.Tx.Notes().Get(command.Tx.Context(), c.ProjectID, id, false)
+		n, e := command.Tx.Notes().Get(command.Tx.Context(), c.ProjectID, id, includeDeleted)
 		if e != nil {
 			return nil, e
 		}

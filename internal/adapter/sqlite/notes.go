@@ -54,10 +54,21 @@ func (r noteRepo) Get(ctx context.Context, project, id string, deleted bool) (do
 	return scanNote(r.tx.QueryRowContext(ctx, q, project, id))
 }
 func (r noteRepo) List(ctx context.Context, project string) ([]domain.Note, error) {
+	return r.list(ctx, project, false)
+}
+func (r noteRepo) ListIncludingDeleted(ctx context.Context, project string) ([]domain.Note, error) {
+	return r.list(ctx, project, true)
+}
+func (r noteRepo) list(ctx context.Context, project string, includeDeleted bool) ([]domain.Note, error) {
 	if e := r.check(); e != nil {
 		return nil, e
 	}
-	rows, e := r.tx.QueryContext(ctx, "SELECT "+noteColumns+" FROM notes WHERE project_id=? AND deleted_at IS NULL ORDER BY pinned DESC,updated_at DESC,id", project)
+	query := "SELECT " + noteColumns + " FROM notes WHERE project_id=?"
+	if !includeDeleted {
+		query += " AND deleted_at IS NULL"
+	}
+	query += " ORDER BY pinned DESC,updated_at DESC,id"
+	rows, e := r.tx.QueryContext(ctx, query, project)
 	if e != nil {
 		return nil, classify(e)
 	}

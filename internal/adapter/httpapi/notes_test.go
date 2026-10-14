@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/yoophi/td-backend/internal/adapter/httpapi/receiptcodec"
@@ -24,6 +25,48 @@ func noteFrom(t *testing.T, data []byte) receiptcodec.NoteDTO {
 		t.Fatalf("note response %s: %v", data, e)
 	}
 	return response.Data.Note
+}
+
+func TestDeletedNotesCanBeReadAndRestored(t *testing.T) {
+	h, project, session := issueSetup(t)
+	base := "/v1/projects/" + project + "/notes"
+	status, _, body := issueRequest(t, h, "POST", base, session, key(t), "", `{"title":"Recoverable note"}`)
+	if status != 201 {
+		t.Fatal(status, string(body))
+	}
+	n := noteFrom(t, body)
+	path := base + "/" + n.ID
+	status, etag, body := issueRequest(t, h, "DELETE", path, session, key(t), `"`+n.Revision+`"`, "")
+	if status != 200 || etag != `"r-2"` {
+		t.Fatal(status, etag, string(body))
+	}
+	for _, url := range []string{base, path} {
+		status, _, body = issueRequest(t, h, "GET", url+"?include_deleted=invalid", session, "", "", "")
+		if status != 400 {
+			t.Fatal(url, status, string(body))
+		}
+	}
+	status, _, body = issueRequest(t, h, "GET", path, session, "", "", "")
+	if status != 404 {
+		t.Fatal(status, string(body))
+	}
+	status, _, body = issueRequest(t, h, "GET", path+"?include_deleted=true", session, "", "", "")
+	if status != 200 || noteFrom(t, body).DeletedAt == nil {
+		t.Fatal(status, string(body))
+	}
+	status, _, body = issueRequest(t, h, "GET", base+"?include_deleted=true", session, "", "", "")
+	if status != 200 || !strings.Contains(string(body), n.ID) {
+		t.Fatal(status, string(body))
+	}
+	op := key(t)
+	status, etag, body = issueRequest(t, h, "POST", path+"/restore", session, op, `"r-2"`, "")
+	if status != 200 || etag != `"r-3"` || noteFrom(t, body).DeletedAt != nil {
+		t.Fatal(status, etag, string(body))
+	}
+	status, replay, again := issueRequest(t, h, "POST", path+"/restore", session, op, `"r-2"`, "")
+	if status != 200 || replay != etag || string(again) != string(body) {
+		t.Fatal("restore replay", status, replay, string(again))
+	}
 }
 func TestNotesLifecycleRevisionAndAtomicReceipt(t *testing.T) {
 	h, p, session := issueSetup(t)

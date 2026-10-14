@@ -4590,7 +4590,17 @@
           }
         },
         "x-origin": "proposed",
-        "parameters": []
+        "parameters": [
+          {
+            "name": "include_deleted",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            },
+            "description": "",
+            "in": "query"
+          }
+        ]
       },
       "post": {
         "operationId": "createNote",
@@ -4768,6 +4778,15 @@
               "type": "string",
               "minLength": 1
             }
+          },
+          {
+            "name": "include_deleted",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            },
+            "description": "",
+            "in": "query"
           }
         ]
       },
@@ -4925,6 +4944,105 @@
                       },
                       "required": [
                         "deleted"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "ok",
+                    "data"
+                  ]
+                }
+              }
+            },
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Strong quoted aggregate revision."
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error401"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error409"
+          },
+          "500": {
+            "$ref": "#/components/responses/Error500"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error503"
+          },
+          "412": {
+            "$ref": "#/components/responses/Error412"
+          }
+        },
+        "x-origin": "proposed",
+        "parameters": [
+          {
+            "name": "note_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "example": "\"r-42\"",
+            "description": "Exactly one strong ETag for the aggregate being mutated. Wildcard and weak tags rejected. Missing 428, stale 412. Check and mutation are atomic."
+          }
+        ]
+      }
+    },
+    "/v1/notes/{note_id}/restore": {
+      "post": {
+        "operationId": "restoreNote",
+        "tags": [
+          "Notes"
+        ],
+        "summary": "Restore soft-deleted note",
+        "description": "Restore soft-deleted note",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "note": {
+                          "$ref": "#/components/schemas/Note"
+                        }
+                      },
+                      "required": [
+                        "note"
                       ]
                     }
                   },

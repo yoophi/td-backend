@@ -166,13 +166,14 @@ endpoint(base+'/events','get','streamEvents','Monitor','Stream refresh and ping 
 paths[base+'/events']['get']['responses']['200']={'description':'SSE stream; named refresh and ping events.','content':{'text/event-stream':{'schema':string(),'example':'id: c-42\nevent: refresh\ndata: {"change_token":"c-42","timestamp":"2026-10-13T00:00:00Z"}\n\n'}},'x-event-schemas':{'refresh':ref('RefreshEvent'),'ping':ref('PingEvent')}}
 endpoint(base+'/query','get','queryIssues','Issues','Evaluate TDQ and return issue IDs',obj({'ids':array(string())},['ids']),params=[p('q',string(),required=True)],description='Execute TDQ against backend snapshot and caller session. Also used by CLI-backed td-gui /gui/query; GUI-only routes remain owned by td-gui.')
 notes=base+'/notes'
-endpoint(notes,'get','listNotes','Notes','List shared notes',many('notes','Note'))
+endpoint(notes,'get','listNotes','Notes','List shared notes',many('notes','Note'),params=[p('include_deleted',boolean(default=False))])
 endpoint(notes,'post','createNote','Notes','Create note',one('note','Note'),request({'title':string(minLength=1),'content':string(),'pinned':boolean(default=False)},['title']),201)
 S['Note']['properties']['revision']=string(minLength=1)
 S['Note']['required'].append('revision')
-endpoint(notes+'/{note_id}','get','getNote','Notes','Read note',one('note','Note'))
+endpoint(notes+'/{note_id}','get','getNote','Notes','Read note',one('note','Note'),params=[p('include_deleted',boolean(default=False))])
 endpoint(notes+'/{note_id}','patch','updateNote','Notes','Edit note',one('note','Note'),request({'title':string(minLength=1),'content':string(),'pinned':boolean(),'archived':boolean()},minProperties=1),revision=True)
 endpoint(notes+'/{note_id}','delete','deleteNote','Notes','Soft delete note',flag('deleted'),revision=True)
+endpoint(notes+'/{note_id}/restore','post','restoreNote','Notes','Restore soft-deleted note',one('note','Note'),revision=True)
 ws=base+'/work-sessions'
 endpoint(ws,'get','listWorkSessions','Sessions','List multi-issue work sessions',many('work_sessions','WorkSession'))
 endpoint(ws,'post','startWorkSession','Sessions','Start multi-issue work session',one('work_session','WorkSession'),request({'name':string(minLength=1),'start_sha':string()},['name']),201,description='Server records session attribution. Active work session selection, worktree root and repository path stay in client context.')
