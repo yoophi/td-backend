@@ -388,3 +388,7 @@ CLI `start`와 ID 지정 `unstart`를 backend workflow action에 연결했습니
 ## gh-16 진행 — comment/comments
 
 CLI `comment`와 `comments add`를 revision/key가 있는 원격 활동 추가 API에 연결했습니다. 결과의 Issue, Session, 본문과 생성시각을 확인한 뒤 intent를 완료합니다. `comments`는 일관된 읽기 snapshot에서 원격 상세의 댓글을 반환합니다. 실제 SQLite 서버 smoke에서 두 추가 경로와 목록·순서를 확인했습니다.
+
+## gh-16 진행 — log 원격 활동
+
+CLI `log`를 backend 활동 API에 연결했습니다. 명시한 Issue 또는 현재 focus를 사용하고, type 단축 플래그·stdin 본문과 호출 Session의 활성 Work Session을 기록합니다. focus, stdin과 Work Session ID는 새 요청 준비 중에만 읽으며, 응답 유실 뒤 재실행에는 저장한 요청과 key를 그대로 사용합니다. 실제 서버에서 decision log와 Work Session 귀속을 검증했고, stdin이 바뀐 뒤 원문 복구 회귀를 CLI race로 검증했습니다.

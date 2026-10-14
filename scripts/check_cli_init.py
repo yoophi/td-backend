@@ -82,7 +82,7 @@ def main():
                             '--project-id=' + project)['backend']['project_id'] == project
                 init(repo, '--project-id=prj_0199dc38-1200-7000-8000-000000000001', success=False)
                 init(repo, '--project-id=invalid', success=False)
-                def post(path, body, revision=None, method="POST"):
+                def post(path, body, revision=None, method="POST", session_override=None):
                     request = urllib.request.Request(endpoint + path,
                         data=None if body is None else json.dumps(body).encode(), method=method, headers={
                             'Authorization': 'Bearer ' + token,
@@ -92,7 +92,7 @@ def main():
                     if revision is not None:
                         request.add_header('If-Match', '"' + revision + '"')
                     if caller:
-                        request.add_header('X-TD-Session', caller)
+                        request.add_header('X-TD-Session', session_override or caller)
                     with urllib.request.urlopen(request, timeout=15) as response:
                         return json.load(response)['data']
                 caller = ''
@@ -341,11 +341,22 @@ def main():
                 comments = cli_comment('comments', work['id'])
                 assert [item['text'] for item in comments] == [
                     'Remote CLI comment fixture', 'Second CLI comment']
+                own_work_session = post(base + '/work-sessions',
+                    {'name':'CLI log ownership fixture'},
+                    session_override=started['issue']['implementer_session'])['work_session']['id']
+                logged = cli_comment('log', work['id'],
+                    'Remote CLI decision log', '--type=decision')
+                assert logged['log']['message'] == 'Remote CLI decision log'
+                assert logged['log']['type'] == 'decision'
+                assert logged['log']['timestamp']
+                assert logged['log']['work_session_id'] == own_work_session
+                assert any(log['message'] == 'Remote CLI decision log'
+                    for log in show(work['id'])['logs'])
                 for directory in (repo, attached):
                     assert not (directory / '.todos/issues.db').exists(), 'local SQLite fallback'
                     config = (directory / '.todos/config.json').read_text()
                     assert token not in config, 'token persisted in config'
-                print('PASS: real backend init/reuse/worktree/attach, show/prefix/children/tree/multiple, TDQ fields/hierarchy/comments, ranked log search, list filters/TDQ, info statistics, CLI create/dependency/blocks, deleted listing/write/reason, workflow status/field update/start/unstart/block/unblock/reopen, comments, no local DB/token')
+                print('PASS: real backend init/reuse/worktree/attach, show/prefix/children/tree/multiple, TDQ fields/hierarchy/comments, ranked log search, list filters/TDQ, info statistics, CLI create/dependency/blocks, deleted listing/write/reason, workflow status/field update/start/unstart/block/unblock/reopen, comments/log, no local DB/token')
             finally:
                 server.terminate()
                 try:
