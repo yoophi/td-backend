@@ -277,11 +277,44 @@ def main():
                     text=True, timeout=30)
                 assert second.returncode != 0 and 'completed for ' + another['id'] in second.stdout
                 assert show(another['id'])['revision'] == revision_after_partial
+                work = post(base + '/issues', {'title': 'Workflow CLI fixture',
+                    'type': 'task'})['issue']
+                def cli_workflow(action):
+                    result = subprocess.run([args.cli, '--work-dir', str(repo),
+                        action, work['id'], '--reason=workflow smoke', '--json'],
+                        env=env, capture_output=True, text=True, timeout=30)
+                    if result.returncode:
+                        raise RuntimeError(result.stdout + result.stderr)
+                    return json.loads(result.stdout)
+                started = cli_workflow('start')
+                assert started['status'] == 'in_progress'
+                assert started['issue']['implementer_session']
+                assert cli_workflow('start')['noop']
+                unstarted = cli_workflow('unstart')
+                assert unstarted['status'] == 'open'
+                assert not unstarted['issue'].get('implementer_session')
+                assert cli_workflow('unstart')['noop']
+                assert show(work['id'])['status'] == 'open'
+                blocked = post(base + '/issues', {'title': 'Blocked start CLI fixture',
+                    'type': 'task'})['issue']
+                block = subprocess.run([args.cli, '--work-dir', str(repo), 'update',
+                    blocked['id'], '--status=blocked', '--json'], env=env,
+                    capture_output=True, text=True, timeout=30)
+                assert block.returncode == 0
+                ordinary_start = subprocess.run([args.cli, '--work-dir', str(repo),
+                    'start', blocked['id'], '--json'], env=env,
+                    capture_output=True, text=True, timeout=30)
+                assert ordinary_start.returncode != 0
+                forced_start = subprocess.run([args.cli, '--work-dir', str(repo),
+                    'start', blocked['id'], '--force', '--json'], env=env,
+                    capture_output=True, text=True, timeout=30)
+                assert forced_start.returncode == 0
+                assert json.loads(forced_start.stdout)['status'] == 'in_progress'
                 for directory in (repo, attached):
                     assert not (directory / '.todos/issues.db').exists(), 'local SQLite fallback'
                     config = (directory / '.todos/config.json').read_text()
                     assert token not in config, 'token persisted in config'
-                print('PASS: real backend init/reuse/worktree/attach, show/prefix/children/tree/multiple, TDQ fields/hierarchy/comments, ranked log search, list filters/TDQ, info statistics, CLI create/dependency/blocks, deleted listing/write/reason, workflow status/field update, no local DB/token')
+                print('PASS: real backend init/reuse/worktree/attach, show/prefix/children/tree/multiple, TDQ fields/hierarchy/comments, ranked log search, list filters/TDQ, info statistics, CLI create/dependency/blocks, deleted listing/write/reason, workflow status/field update/start/unstart, no local DB/token')
             finally:
                 server.terminate()
                 try:

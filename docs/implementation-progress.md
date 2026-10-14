@@ -374,3 +374,9 @@ CLI `update --status`를 backend 전용 workflow endpoint에 연결했습니다.
 CLI `update`의 제목·description/acceptance 및 파일 입력·append·type·priority·points·labels·sprint·parent·due/defer 필드를 backend PATCH에 연결했습니다. 관측 revision과 immutable body/key를 먼저 저장한 뒤 한 번 전송합니다. 응답 유실 후 파일이 바뀌어도 원래 본문을 재전송하는 회귀를 추가했습니다. 이미 요청한 값이면 변경을 생략해 다중 Issue 부분 성공 재실행의 중복 revision 증가를 방지합니다. append는 단일 Issue에 한정하고, 아직 미연결인 comment·relation 및 status와 일반 필드의 혼합은 쓰기 전에 오류로 반환합니다.
 
 실제 SQLite 서버 smoke에서 필드 변경·noop·append·다중 Issue 부분 성공 재실행을 검증했습니다. CLI 관련 race/vet 검증도 통과했습니다.
+
+## gh-16 진행 — start 및 named unstart
+
+CLI `start`와 ID 지정 `unstart`를 backend workflow action에 연결했습니다. 각 Issue의 관측 revision과 요청 key를 저장하며 응답의 ID·상태·implementer Session을 검증합니다. 반복 실행에서는 자기 Session의 진행 중 Issue 또는 claim 없는 open Issue를 noop으로 처리합니다. 여러 Issue 처리 중 실패하면 완료 범위를 보고합니다. `unstart --session/--stale` sweep은 미연결이므로 실행 전 명시적으로 실패합니다.
+
+실제 서버 smoke에서 start→unstart, 반복 noop, blocked Issue의 일반 start 거부와 `--force` start 허용을 검증했습니다. 기존 init 회귀에서 이제 지원하는 start를 미연결 명령 목록에서 제거하고 close guard는 유지했습니다.
