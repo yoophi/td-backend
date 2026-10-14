@@ -1,5 +1,22 @@
 # 구현 진행 기록
 
+## gh-17·gh-18 완료, gh-20 구현 검증
+
+Monitor의 terminal 및 embedded 경로와 `td serve`의 원격 GUI facade를 실제
+Go/SQLite 서버에 연결해 검증하고 gh-17·gh-18을 종료했습니다. CLI 브랜치의
+`eba56d7`, `17ae9da`를 포함한 변경은 push했습니다. 남은 전체 CLI/Monitor/GUI
+통합 회귀와 최종 검토는 gh-19에서 추적합니다.
+
+gh-20에서 서버의 claim release endpoint가 `--session` 및 `--stale` sweep의
+holder·revision·liveness·lineage를 쓰기 transaction 안에서 다시 검사합니다.
+CLI는 preview와 강제 해제를 연결하고, 복합 `update`의 필드·workflow status·
+댓글·양방향 의존성 교체를 고정된 그룹 계획과 단계별 멱등 요청으로 실행합니다.
+실제 서버에서 100ms stale 해제, 지정 Session 강제 해제, 복합 변경·관계 교체,
+여러 대상 스킵 및 거부된 workflow의 재실행을 확인했습니다. 백엔드 `make test`,
+`make check`, `make spec`과 CLI 대상 회귀·race·vet 및 `make install`을 통과했고,
+CLI 전체 `make test`는 진행 중입니다. 관련 변경은 백엔드 `b3d1f7a`,
+`953d1ab` 및 CLI `c2e7c7e`, `7546acf`, `d33161b`, `39d519e`로 push했습니다.
+
 ## gh-16 완료 및 gh-17 Monitor 진행
 
 Monitor의 Note 모달에 backend 목록·상세·생성·수정·pin/archive·삭제·복원을
