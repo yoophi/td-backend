@@ -408,3 +408,7 @@ CLI `review`, `reject`, `close`를 관측 revision 기반 backend workflow actio
 CLI `approve <id>`를 backend 승인·종료 workflow에 연결했습니다. `--self-review`, `--reviewed-by`, reason 별칭을 전달하고 서버 정책에 따라 reviewer 기록과 종료를 처리합니다. `--record-only`는 별도 `/reviews` API를 사용하여 `approved` 또는 `changes_requested` 결정을 현재 review 상태에 기록합니다. 명시한 ID를 여러 개 처리할 때는 앞선 성공을 보고하고 같은 명령 재실행에서 완료된 종료나 동일 리뷰 기록을 noop으로 처리합니다. ID 생략 시 서버 monitor의 reviewable/ready-to-close 후보가 하나면 자동 선택하고, 둘 이상이면 선택을 요구합니다. `--all`은 현재 후보를 ID순으로 처리합니다.
 
 실제 SQLite 서버 smoke에서 changes_requested→record-only 승인→close 및 직접 self-review 승인·종료를 확인했습니다. 동일 기록 재실행은 revision 증가 없이 noop입니다. 미지원 옵션 guard는 `review --minor`로 이동했습니다. 별도 smoke에서 후보 둘의 모호성 오류와 `approve --all --self-review`의 일괄 종료를 검증했습니다.
+
+## gh-16 진행 — dep add/rm
+
+CLI `dep add`와 `dep rm`을 backend의 관계 추가·삭제 API에 연결했습니다. 대상 ID를 먼저 모두 확인하고, 각 관계별 관측 revision과 영속 요청 key를 사용합니다. 서버 `dep_id`를 읽어 삭제하며, 동일 관계를 다시 추가하거나 삭제하면 noop으로 처리합니다. 다중 대상 중 실패하면 앞서 완료한 ID를 보고합니다. 실제 SQLite 서버 smoke에서 추가·반복 추가·상세 조회·삭제·반복 삭제를 검증했습니다. `dep`, `depends-on`, `blocked-by` 등의 관계 조회는 후속 작업입니다.
