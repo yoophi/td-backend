@@ -21,7 +21,7 @@ td serve
 td-gui
 ```
 
-최초 init에는 Project ID가 필요 없습니다. 생성 응답의 ID를 `.todos/config.json`에 저장하고 이후 init에서는 재사용합니다. 기존 Project 연결에는 전체 ID를 지정합니다. 이미 저장된 연결과 다른 URL/ID가 주어지면 자동으로 덮어쓰지 않습니다. CLI의 `feat/td-backend-store` 브랜치에서 init, 읽기 명령과 create를 지원합니다. monitor·serve 및 나머지 변경 명령 연결은 진행 중입니다.
+최초 init에는 Project ID가 필요 없습니다. 생성 응답의 ID를 `.todos/config.json`에 저장하고 이후 init에서는 재사용합니다. 기존 Project 연결에는 전체 ID를 지정합니다. 이미 저장된 연결과 다른 URL/ID가 주어지면 자동으로 덮어쓰지 않습니다. CLI의 `feat/td-backend-store` 브랜치에서 init, 읽기 명령과 주요 Issue 생성·수정·workflow 명령을 지원합니다. `approve`는 명시한 Issue ID에 대해 직접 승인과 `--record-only` 기록을 지원하며, 후보 자동 선택·`--all`은 연결 중입니다. monitor·serve 연결도 진행 중입니다.
 
 ## 연결 구조
 

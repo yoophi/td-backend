@@ -402,3 +402,9 @@ CLI `handoff`를 backend의 수동 `activity` 기록에 연결했습니다. done
 CLI `review`, `reject`, `close`를 관측 revision 기반 backend workflow action에 연결했습니다. reason 별칭과 close의 admin/self-close exception을 요청에 보냅니다. 서버가 handoff/review 및 권한 정책을 검사하며, CLI는 목표 상태와 Issue ID를 확인합니다. 현재 `review --minor`는 기존 Issue의 필드 변경이 별도 command이므로 사전 거절합니다.
 
 실제 SQLite 서버 smoke에서 handoff→review, reject→새 handoff→review, admin close와 reopen을 확인했습니다. 기존 init 회귀의 미연결 guard는 여전히 미연결인 approve로 옮겼습니다.
+
+## gh-16 진행 — approve 및 리뷰 기록
+
+CLI `approve <id>`를 backend 승인·종료 workflow에 연결했습니다. `--self-review`, `--reviewed-by`, reason 별칭을 전달하고 서버 정책에 따라 reviewer 기록과 종료를 처리합니다. `--record-only`는 별도 `/reviews` API를 사용하여 `approved` 또는 `changes_requested` 결정을 현재 review 상태에 기록합니다. 명시한 ID를 여러 개 처리할 때는 앞선 성공을 보고하고 같은 명령 재실행에서 완료된 종료를 noop으로 처리합니다. 후보 자동 선택과 `--all`은 아직 연결하지 않아 사전에 오류로 반환합니다.
+
+실제 SQLite 서버 smoke에서 changes_requested→record-only 승인→close 및 직접 self-review 승인·종료를 확인했습니다. 미지원 옵션 guard는 `approve --all`로 이동했습니다.

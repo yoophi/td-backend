@@ -373,11 +373,40 @@ def main():
                     '--done=Revision after rejection')
                 assert second_handoff['activity']['done'] == ['Revision after rejection']
                 assert cli_direct('review', work['id'])['status'] == 'in_review'
+                def cli_approve(issue_id, *flags):
+                    result = subprocess.run([args.cli, '--work-dir', str(repo),
+                        'approve', issue_id, *flags, '--json'], env=env,
+                        capture_output=True, text=True, timeout=30)
+                    if result.returncode:
+                        raise RuntimeError(result.stdout + result.stderr)
+                    return json.loads(result.stdout)
+                requested = cli_approve(work['id'], '--record-only',
+                    '--decision=changes_requested', '--self-review',
+                    '--reason=Please revise the test')
+                assert requested['status'] == 'in_review'
+                assert show(work['id'])['reviews'][-1]['decision'] == 'changes_requested'
+                requested_revision = show(work['id'])['revision']
+                assert cli_approve(work['id'], '--record-only',
+                    '--decision=changes_requested', '--self-review',
+                    '--reason=Please revise the test')['noop']
+                assert show(work['id'])['revision'] == requested_revision
+                recorded = cli_approve(work['id'], '--record-only',
+                    '--self-review', '--reason=Verified revision')
+                assert recorded['status'] == 'in_review'
+                assert show(work['id'])['reviews'][-1]['decision'] == 'approved'
+                assert cli_direct('close', work['id'])['status'] == 'closed'
+                direct = post(base + '/issues', {'title': 'Direct approval CLI fixture',
+                    'type': 'task'})['issue']
+                assert cli_direct('start', direct['id'])['status'] == 'in_progress'
+                cli_comment('handoff', direct['id'], '--done=Ready for direct approval')
+                assert cli_direct('review', direct['id'])['status'] == 'in_review'
+                assert cli_approve(direct['id'], '--self-review',
+                    '--reason=Verified direct approval')['status'] == 'closed'
                 for directory in (repo, attached):
                     assert not (directory / '.todos/issues.db').exists(), 'local SQLite fallback'
                     config = (directory / '.todos/config.json').read_text()
                     assert token not in config, 'token persisted in config'
-                print('PASS: real backend init/reuse/worktree/attach, show/prefix/children/tree/multiple, TDQ fields/hierarchy/comments, ranked log search, list filters/TDQ, info statistics, CLI create/dependency/blocks, deleted listing/write/reason, workflow status/field update/start/unstart/block/unblock/reopen, comments/log/handoff/review/reject/close, no local DB/token')
+                print('PASS: real backend init/reuse/worktree/attach, show/prefix/children/tree/multiple, TDQ fields/hierarchy/comments, ranked log search, list filters/TDQ, info statistics, CLI create/dependency/blocks, deleted listing/write/reason, workflow status/field update/start/unstart/block/unblock/reopen, comments/log/handoff/review/reject/approve/close, no local DB/token')
             finally:
                 server.terminate()
                 try:
