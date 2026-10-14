@@ -336,3 +336,11 @@ gh-15는 실제 acceptance와 Reader/Client/CLI 읽기 경로를 대조한 self-
 backendstore.RunIntent는 semantic invocation의 hash별 요청을 사용자 config의 Session-scoped operations 디렉터리에 저장합니다. HTTP 전에 UUIDv4 key/method/resource/observed revision/JSON body를 0600 파일에 원자 기록합니다. pending 요청은 준비 함수를 다시 호출하지 않고 기존 payload/revision/key로 receipt를 복구합니다. verified success 또는 definite 4xx 이후 새 실행은 fresh request를 준비하고, 완료 전에 시작된 concurrent 실행은 원래 receipt를 사용합니다. network/decode/response verification 또는 완료 기록 실패는 uncertain으로 남겨 성공으로 보고하지 않습니다. 파일 lock 동안 HTTP나 prepare를 실행하지 않습니다.
 
 응답 유실·immutable read-modify-write 복구, 검증 실패, 로컬 완료 저장 실패, stale의 무재시도/새 실행 reobserve, concurrent prepare 이후 이미 완료된 receipt 복구 회귀가 race/vet를 통과했습니다. 응답 decode는 fresh value에 수행하여 이전 성공 값이 required field 누락을 가리지 않게 했고 해당 uncertain/recovery 회귀를 추가했습니다. 기존 읽기 CLI race 회귀도 통과했습니다. 실제 create/update/workflow 등 명령 연결은 다음 gh-16 작업 단위입니다.
+
+## gh-16 진행 — 원격 create 기본 필드와 outgoing dependencies
+
+CLI create를 durable RunIntent에 연결했습니다. title/positional type/type-prefix·별칭, priority/points/labels/minor, rich description/acceptance 파일·stdin, due/defer, parent/epic prefix, depends-on 및 CreatedBranch를 서버 생성 요청에 전달합니다. Project의 title 길이 정책을 읽고 검증하며, parent/dependency 해석은 일관된 snapshot에서 수행합니다. Creator Session과 핵심 반환 필드를 검증한 뒤에만 완료·출력합니다. JSON/human 출력 변경은 command identity를 바꾸지 않습니다.
+
+응답 유실 이후 본문 파일이 변경돼도 기존 pending payload/key를 재사용하고 중복 생성하지 않는 회귀가 race/vet를 통과했습니다. 완료 이후 새 실행은 새 key를 쓰며, 잘못된 type/아직 미연결인 incoming --blocks는 생성 전에 거절합니다. 실제 서버/SQLite smoke에서 CLI create의 feature alias/priority/points/minor/본문 보존/parent/dependency 연결을 확인했습니다.
+
+Incoming --blocks는 기존 Issue의 관계도 변경해야 하므로 원자 처리와 복구 검증이 남아 있으며, 이번 기본 생성 단위를 전체 create/gh-16 완료로 분류하지 않습니다. update/delete/restore, workflow, activity/relations/files, boards/notes/ws와 Undo 연결도 계속 진행합니다.

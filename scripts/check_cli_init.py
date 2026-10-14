@@ -168,11 +168,28 @@ def main():
                 assert overview['by_type']['epic'] == 1
                 assert overview['backend']['project_id'] == project
                 assert 'database' not in overview
+                description_file = root / 'cli-created-description.md'
+                description_file.write_text('Created through CLI\n\nPreserved paragraph\n')
+                result = subprocess.run([args.cli, '--work-dir', str(repo), 'create',
+                    'Remote CLI creation fixture', '--type=story', '--priority=p1',
+                    '--points=3', '--labels=cli,smoke', '--minor',
+                    '--description-file=' + str(description_file), '--parent=' + parent,
+                    '--depends-on=' + child, '--json'], env=env,
+                    capture_output=True, text=True, timeout=30)
+                if result.returncode:
+                    raise RuntimeError(result.stderr)
+                created = json.loads(result.stdout)['issue']
+                assert created['type'] == 'feature' and created['priority'] == 'P1'
+                assert created['points'] == 3 and created['minor']
+                assert created['parent_id'] == parent
+                assert created['description'] == description_file.read_text()
+                created_detail = show(created['id'])
+                assert created_detail['dependencies'][0]['depends_on_id'] == child
                 for directory in (repo, attached):
                     assert not (directory / '.todos/issues.db').exists(), 'local SQLite fallback'
                     config = (directory / '.todos/config.json').read_text()
                     assert token not in config, 'token persisted in config'
-                print('PASS: real backend init/reuse/worktree/attach, show/prefix/children/tree/multiple, TDQ fields/hierarchy/comments, ranked log search, list filters/TDQ, info statistics, no local DB/token')
+                print('PASS: real backend init/reuse/worktree/attach, show/prefix/children/tree/multiple, TDQ fields/hierarchy/comments, ranked log search, list filters/TDQ, info statistics, CLI create/dependency, no local DB/token')
             finally:
                 server.terminate()
                 try:
