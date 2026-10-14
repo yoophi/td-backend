@@ -318,3 +318,13 @@ CLI search를 backend snapshot에 연결했습니다. GitHub와 backend의 순�
 기존 GitHub search 및 원격 own-field/log 순위, status filter, score 출력과 comments 제외 회귀가 race/vet를 통과했습니다. 실제 서버/SQLite에 observed revision으로 log를 추가하고 log-only ranked search 및 comment 제외 smoke를 통과했습니다. CLI 구현은 e3f2cc0에 커밋했습니다.
 
 두 번째 전체 make test(120m)는 약 57분에 완료됐고 non-cmd 전체 및 cmd의 다른 테스트는 통과했습니다. 유일한 실패인 GitHub support matrix의 새 project-id 분류를 unsupported로 기록하여 3d842b5에 커밋·push했고 inventory/matrix isolated 검증이 통과했습니다. 초기화 gh-14 review/approve 상태 전환을 진행 중이며 실제 상태 확인 전 완료로 공지하지 않습니다. 최종 최신 CLI 전체 통합 gate는 gh-19에서 확인합니다.
+
+## gh-14 완료 및 gh-15 목록·통계 연결
+
+gh-14는 실제 acceptance를 대조한 self-review로 승인·종료했고 gh-15를 시작했습니다. 초기화의 parser/UUID/access/conflict/durable key/recovery/atomic config/worktree evidence와 commit/push를 handoff에 기록했습니다. 최종 최신 CLI 전체 통합 gate는 gh-19에서 확인합니다.
+
+원격 list의 일반·TDQ 필터, status/all/open/type/id prefix/labels/priority/search/points/date/implementer/reviewer/mine, parent/epic 및 dot context, scheduling, sort/reverse/limit, JSON/long/short를 연결했습니다. dot context는 focus, Session active work·log/handoff의 공통 root, active WorkSession의 tagged Issue를 순서대로 확인하며 cycle/ambiguity를 거절합니다. reviewable/ready-to-close는 서버 monitor의 정책 평가 결과로 분류합니다. lazy 상세 출력과 모든 필터 처리는 전후 token 확인을 통과한 후에만 출력합니다.
+
+프로젝트 통계 명령인 info도 remote stats 및 review buckets를 일관된 compound read로 연결했습니다. 로컬 DB를 표시하지 않고 store/URL/Project/Session을 표시합니다. total/grouping 필드가 없는 성공 응답을 0건 통계로 표시하지 않고 거절합니다. 목록 필터·hierarchy/TDQ·상세 로그·review 분류와 통계 JSON 회귀가 race/vet를 통과했습니다. 실제 backend SQLite smoke에서도 type/parent/epic/comment TDQ/sort/limit 목록과 info의 total/type/Project 연결을 확인했습니다.
+
+CLI workflow/history/Undo 및 monitor/serve 전체 연결은 gh-16~19에서 계속 진행합니다.

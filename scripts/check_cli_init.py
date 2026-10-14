@@ -145,11 +145,34 @@ def main():
                 assert len(ranked) == 1 and ranked[0]['Issue']['id'] == child
                 assert ranked[0]['MatchField'] == 'log'
                 assert search('ready') == [], 'ranked search unexpectedly included comments'
+                def listing(*flags):
+                    result = subprocess.run([args.cli, '--work-dir', str(repo),
+                        'list', '--json', *flags], env=env, capture_output=True,
+                        text=True, timeout=30)
+                    if result.returncode:
+                        raise RuntimeError(result.stderr)
+                    return json.loads(result.stdout)
+                assert len(listing()) == 2
+                assert [row['id'] for row in listing('--type=epic')] == [parent]
+                assert [row['id'] for row in listing('--parent=' + parent)] == [child]
+                assert [row['id'] for row in listing('--epic=' + parent)] == [child]
+                assert [row['id'] for row in listing('--filter=comment.text ~ "ready"')] == [child]
+                assert len(listing('--sort=title', '--reverse', '--limit=1')) == 1
+                result = subprocess.run([args.cli, '--work-dir', str(repo),
+                    'info', '--json'], env=env, capture_output=True, text=True, timeout=30)
+                if result.returncode:
+                    raise RuntimeError(result.stderr)
+                overview = json.loads(result.stdout)
+                assert overview['store'] == 'td-backend'
+                assert overview['issues']['total'] == 2
+                assert overview['by_type']['epic'] == 1
+                assert overview['backend']['project_id'] == project
+                assert 'database' not in overview
                 for directory in (repo, attached):
                     assert not (directory / '.todos/issues.db').exists(), 'local SQLite fallback'
                     config = (directory / '.todos/config.json').read_text()
                     assert token not in config, 'token persisted in config'
-                print('PASS: real backend init/reuse/worktree/attach, show/prefix/children/tree/multiple, TDQ fields/hierarchy/comments, ranked log search, no local DB/token')
+                print('PASS: real backend init/reuse/worktree/attach, show/prefix/children/tree/multiple, TDQ fields/hierarchy/comments, ranked log search, list filters/TDQ, info statistics, no local DB/token')
             finally:
                 server.terminate()
                 try:
