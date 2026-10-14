@@ -1,5 +1,21 @@
 # 구현 진행 기록
 
+## gh-16 완료 및 gh-17 Monitor 진행
+
+gh-16의 명시 완료 기준을 실제 Go/SQLite 서버와 CLI 통합 스모크로 재검증하고
+검토·종료했습니다. 복합 `update` 플래그 및 `unstart --session/--stale` 확장은
+별도 gh-20으로 추적합니다.
+
+gh-17의 terminal 및 embedded monitor에 backend factory를 추가했습니다.
+서버의 일관된 Monitor snapshot을 TUI 데이터로 변환하며 중복 refresh를 건너뛰고,
+요청 전후 프로젝트·worktree·Session이 달라졌으면 결과를 버립니다. 상세 창은
+Issue revision이 관계 목록의 관측값과 일치할 때만 갱신합니다. Board 목록·카드,
+생성·편집·삭제, 카드 이동은 원격 API를 사용하고 변경 전에 Board revision과
+카드 관측값을 재확인합니다. 보드 보기 방식과 최근 방문 보드는 기기 로컬 설정에
+보관합니다. 작업 단위별 CLI 커밋 `598bf0b`, `03b0eff`, `188644d`, `983a4d7`,
+`5b7e05d`, `5e0f6c1`을 push했고 관련 race/vet 검증을 통과했습니다. Note,
+Issue 편집·workflow, 통계·handoff 및 Board query preview 등은 계속 연결해야 합니다.
+
 CLI `ws list/show/current/start/end/tag/untag/log/handoff`를 서버 Work Session 및 Issue
 Log API에 연결했습니다. `ws log`는 현재 태그된 Issue에 각각 같은 메시지를
 기록하고 `--only`로 대상 Issue를 지정할 수 있습니다. 각 기록은 독립적인
