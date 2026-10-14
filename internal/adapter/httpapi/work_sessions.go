@@ -43,6 +43,24 @@ func registerWorkSessions(mux *http.ServeMux, svc *worksession.Service, protect 
 			IssueIDs    []string                    `json:"issue_ids"`
 		}{receiptcodec.WorkSessionDTOFrom(s.WorkSession), receiptcodec.WorkSessionIssueIDs(s)})
 	}))
+	mux.HandleFunc("GET "+base+"/{work_session_id}/activity", protect(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.RawQuery != "" {
+			writeError(w, invalid("query", "no query parameters supported"))
+			return
+		}
+		list, e := svc.ListActivity(r.Context(), caller(r), r.PathValue("work_session_id"))
+		if e != nil {
+			writeError(w, e)
+			return
+		}
+		result := make([]receiptcodec.ActivityDTO, 0, len(list))
+		for _, a := range list {
+			result = append(result, receiptcodec.ActivityDTOFrom(a))
+		}
+		writeSuccess(w, 200, struct {
+			Activity []receiptcodec.ActivityDTO `json:"activity"`
+		}{result})
+	}))
 	mux.HandleFunc("POST "+base, protect(func(w http.ResponseWriter, r *http.Request) {
 		var cmd worksession.StartCommand
 		if e := decode(w, r, &cmd); e != nil {

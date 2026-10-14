@@ -6,6 +6,9 @@ Log API에 연결했습니다. `ws log`는 현재 태그된 Issue에 각각 같�
 durable intent로 재시도하며 Work Session ID로 귀속합니다. 현재 서버는
 Issue 없는 Work Session 전용 로그 저장을 지원하지 않아 태그 없이 `ws log`를
 실행하면 대상 Issue를 지정하라는 오류를 반환합니다.
+Work Session별 활동 조회 API는 당시 태그가 해제되었거나 Issue가 나중에
+삭제되어도 해당 Session ID로 기록된 활동을 돌려줍니다. CLI `ws current/show`
+JSON의 `activities` 및 사람이 읽는 최근 활동에 사용합니다.
 현재 Session의 active Work Session만 `current`로 선택하고, start/end는 Git
 commit과 durable intent를 사용합니다. CLI start는 이미 선택된 active Work
 Session이 있으면 거부합니다. 실제 서버 스모크에서 생성·현재 선택·종료를

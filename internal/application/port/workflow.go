@@ -50,6 +50,7 @@ type WorkflowReader interface {
 	ActiveReview(context.Context, string, string) (*Review, error)
 	LatestHandoff(context.Context, string, string) (*Activity, error)
 	Activities(context.Context, string, string, bool) ([]Activity, error)
+	WorkSessionActivities(context.Context, string, string) ([]Activity, error)
 	WorkSessionAccess(context.Context, string, string) (WorkSessionAccess, error)
 }
 type WorkflowWriter interface {

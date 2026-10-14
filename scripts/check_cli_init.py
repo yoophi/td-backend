@@ -215,6 +215,7 @@ def main():
                 shared_logs = cli_ws('log', 'Both issues have progress')['logs']
                 assert {log['issue_id'] for log in shared_logs} == {parent, child}
                 assert all(log['work_session_id'] == started_ws['id'] for log in shared_logs)
+                assert len(cli_ws('current')['activities']) == 4
                 assert cli_ws('untag', child)['issues'] == [child]
                 assert cli_ws('current')['issues'] == [parent]
                 assert cli_ws('untag', parent)['issues'] == [parent]
@@ -228,6 +229,7 @@ def main():
                 assert unstart_child.returncode == 0, unstart_child.stderr
                 ended_ws = cli_ws('end')['work_session']
                 assert ended_ws['id'] == started_ws['id'] and ended_ws['ended_at']
+                assert len(cli_ws('show', started_ws['id'])['activities']) == 4
                 assert cli_ws('current')['work_session'] is None
                 post(base + '/issues/' + child + '/comments', {'text': 'ready for remote query'}, show(child)['revision'])
                 def query(expression):

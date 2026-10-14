@@ -12,18 +12,21 @@ import (
 )
 
 func (r workflowRepo) Activities(ctx context.Context, project, issue string, deleted bool) ([]port.Activity, error) {
-	return r.activityList(ctx, project, issue, deleted, 0, "", time.Time{})
+	return r.activityList(ctx, project, issue, "", deleted, 0, "", time.Time{})
+}
+func (r workflowRepo) WorkSessionActivities(ctx context.Context, project, workSession string) ([]port.Activity, error) {
+	return r.activityList(ctx, project, "", workSession, false, 0, "", time.Time{})
 }
 func (r workflowRepo) Feed(ctx context.Context, project string, limit int) ([]port.Activity, error) {
 	if limit < 1 || limit > 1000 {
 		return nil, domain.ErrConflict
 	}
-	return r.activityList(ctx, project, "", false, limit, "", time.Time{})
+	return r.activityList(ctx, project, "", "", false, limit, "", time.Time{})
 }
 func (r workflowRepo) RecentHandoffs(ctx context.Context, project string, since time.Time) ([]port.Activity, error) {
-	return r.activityList(ctx, project, "", false, 0, "handoff", since)
+	return r.activityList(ctx, project, "", "", false, 0, "handoff", since)
 }
-func (r workflowRepo) activityList(ctx context.Context, project, issue string, deleted bool, limit int, kind string, since time.Time) ([]port.Activity, error) {
+func (r workflowRepo) activityList(ctx context.Context, project, issue, workSession string, deleted bool, limit int, kind string, since time.Time) ([]port.Activity, error) {
 	if e := r.check(); e != nil {
 		return nil, e
 	}
@@ -32,8 +35,12 @@ func (r workflowRepo) activityList(ctx context.Context, project, issue string, d
 	if issue != "" {
 		q += " AND a.issue_id=?"
 		args = append(args, issue)
-	} else {
+	} else if workSession == "" {
 		q += " AND EXISTS (SELECT 1 FROM issues i WHERE i.project_id=a.project_id AND i.id=a.issue_id AND i.deleted_at IS NULL)"
+	}
+	if workSession != "" {
+		q += " AND a.work_session_id=?"
+		args = append(args, workSession)
 	}
 	if kind != "" {
 		q += " AND a.kind=?"

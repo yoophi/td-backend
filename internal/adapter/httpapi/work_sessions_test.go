@@ -26,6 +26,64 @@ func workSessionFrom(t *testing.T, data []byte) receiptcodec.WorkSessionDTO {
 	}
 	return response.Data.WorkSession
 }
+
+func TestWorkSessionActivityRetainsUntaggedAndDeletedIssueHistory(t *testing.T) {
+	h, project, session := issueSetup(t)
+	root := "/v1/projects/" + project
+	base := root + "/work-sessions"
+	status, _, data := issueRequest(t, h, "POST", base, session, key(t), "", `{"name":"History"}`)
+	if status != 201 {
+		t.Fatal(status, string(data))
+	}
+	ws := workSessionFrom(t, data)
+	issues := []receiptcodec.IssueDTO{}
+	for _, title := range []string{"First work item", "Second work item"} {
+		status, _, data = issueRequest(t, h, "POST", root+"/issues", session, key(t), "", fmt.Sprintf(`{"title":%q}`, title))
+		if status != 201 {
+			t.Fatal(status, string(data))
+		}
+		issues = append(issues, issueFrom(t, data))
+	}
+	status, _, data = issueRequest(t, h, "PUT", base+"/"+ws.ID+"/issues", session, key(t), "", fmt.Sprintf(`{"issue_ids":[%q]}`, issues[0].ID))
+	if status != 200 {
+		t.Fatal(status, string(data))
+	}
+	for _, issue := range issues {
+		status, _, data = issueRequest(t, h, "POST", root+"/issues/"+issue.ID+"/logs", session, key(t), `"r-1"`, fmt.Sprintf(`{"message":"Work on %s","type":"progress","work_session_id":%q}`, issue.ID, ws.ID))
+		if status != 201 {
+			t.Fatal(status, string(data))
+		}
+	}
+	status, _, data = issueRequest(t, h, "PUT", base+"/"+ws.ID+"/issues", session, key(t), "", `{"issue_ids":[]}`)
+	if status != 200 {
+		t.Fatal(status, string(data))
+	}
+	status, _, data = issueRequest(t, h, "DELETE", root+"/issues/"+issues[1].ID, session, key(t), `"r-2"`, "")
+	if status != 200 {
+		t.Fatal(status, string(data))
+	}
+	status, _, data = issueRequest(t, h, "GET", base+"/"+ws.ID+"/activity", session, "", "", "")
+	if status != 200 {
+		t.Fatal(status, string(data))
+	}
+	var response struct {
+		Data struct {
+			Activity []receiptcodec.ActivityDTO `json:"activity"`
+		} `json:"data"`
+	}
+	if e := json.Unmarshal(data, &response); e != nil || len(response.Data.Activity) != 2 {
+		t.Fatalf("work session history: %s: %v", data, e)
+	}
+	for index, activity := range response.Data.Activity {
+		if activity.IssueID != issues[index].ID || activity.WorkSessionID != ws.ID || activity.Kind != "log" {
+			t.Fatalf("unexpected activity: %+v", activity)
+		}
+	}
+	status, _, data = issueRequest(t, h, "GET", base+"/"+ws.ID+"/activity?unexpected=1", session, "", "", "")
+	if status != 400 {
+		t.Fatal(status, string(data))
+	}
+}
 func TestWorkSessionOwnerTagsEndAndAtomicity(t *testing.T) {
 	h, p, session := issueSetup(t)
 	root := "/v1/projects/" + p

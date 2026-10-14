@@ -45,7 +45,7 @@ func TestUndoMigrationPreservesVersionOneWorkSession(t *testing.T) {
 	}
 	defer s.Close()
 	var version int
-	if e = s.writer.QueryRow(`SELECT max(version) FROM schema_migrations`).Scan(&version); e != nil || version != 2 {
+	if e = s.writer.QueryRow(`SELECT max(version) FROM schema_migrations`).Scan(&version); e != nil || version != 3 {
 		t.Fatal(version, e)
 	}
 	now := time.Now().UTC()

@@ -5356,6 +5356,87 @@
         ]
       }
     },
+    "/v1/work-sessions/{work_session_id}/activity": {
+      "get": {
+        "operationId": "listWorkSessionActivity",
+        "tags": [
+          "Sessions"
+        ],
+        "summary": "Read activities attributed to a work session",
+        "description": "Includes activity for issues no longer tagged or later deleted. Only live, non-deleted activity is returned; the owning project is enforced.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "activity": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/Activity"
+                          }
+                        }
+                      },
+                      "required": [
+                        "activity"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "ok",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error401"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error409"
+          },
+          "500": {
+            "$ref": "#/components/responses/Error500"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error503"
+          }
+        },
+        "x-origin": "proposed",
+        "parameters": [
+          {
+            "name": "work_session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ]
+      }
+    },
     "/v1/work-sessions/{work_session_id}/issues": {
       "put": {
         "operationId": "tagWorkSessionIssues",

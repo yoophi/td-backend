@@ -72,6 +72,21 @@ func (s *Service) Get(ctx context.Context, c domain.Caller, id string) (State, e
 	})
 	return out, e
 }
+func (s *Service) ListActivity(ctx context.Context, c domain.Caller, id string) ([]port.Activity, error) {
+	var out []port.Activity
+	e := s.Reads.Snapshot(ctx, func(r port.ReadSnapshot) error {
+		if e := access.Authorize(r.Context(), r, c, true, false); e != nil {
+			return e
+		}
+		if _, e := r.WorkSessions().Get(r.Context(), c.ProjectID, id); e != nil {
+			return e
+		}
+		var e error
+		out, e = r.Workflow().WorkSessionActivities(r.Context(), c.ProjectID, id)
+		return e
+	})
+	return out, e
+}
 func (s *Service) Start(ctx context.Context, c domain.Caller, m port.Mutation, cmd StartCommand) (port.StoredReply, error) {
 	return s.Runner.Run(ctx, c, m, "work_session.start", func(command operation.CommandContext) (any, error) {
 		name := strings.TrimSpace(cmd.Name)
