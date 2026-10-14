@@ -7,6 +7,24 @@ import (
 )
 
 func registerWorkflow(mux *http.ServeMux, svc *workflow.Service, protect func(http.HandlerFunc) http.HandlerFunc, caller func(*http.Request) domain.Caller) {
+	mux.HandleFunc("POST /v1/projects/{project_id}/issues/{issue_id}/release", protect(func(w http.ResponseWriter, r *http.Request) {
+		var cmd workflow.ReleaseCommand
+		if e := decode(w, r, &cmd); e != nil {
+			writeError(w, e)
+			return
+		}
+		m, e := mutation(r, cmd)
+		if e != nil {
+			writeError(w, e)
+			return
+		}
+		reply, e := svc.ReleaseClaim(r.Context(), caller(r), m, r.PathValue("issue_id"), r.Header.Get("If-Match"), cmd)
+		if e != nil {
+			writeError(w, e)
+			return
+		}
+		writeReply(w, reply)
+	}))
 
 	mux.HandleFunc("POST /v1/projects/{project_id}/issues/{issue_id}/status", protect(func(w http.ResponseWriter, r *http.Request) {
 		var cmd workflow.StatusCommand

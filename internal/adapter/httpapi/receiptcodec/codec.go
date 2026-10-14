@@ -210,6 +210,16 @@ func (Codec) Encode(kind string, outcome any) (port.StoredReply, error) {
 			Descendants []IssueDTO `json:"descendant_status_updates"`
 			Unblocked   []IssueDTO `json:"auto_unblocked"`
 		}{IssueDTOFrom(result.Issue), result.Noop, parents, descendants, unblocked}
+	case "workflow.release":
+		result, ok := outcome.(workflow.ReleaseResult)
+		if !ok {
+			return port.StoredReply{}, fmt.Errorf("invalid claim release outcome")
+		}
+		status = 200
+		headers["ETag"] = `"` + domain.Revision(result.Issue.Revision) + `"`
+		outcome = struct {
+			Issue IssueDTO `json:"issue"`
+		}{IssueDTOFrom(result.Issue)}
 	case "workflow.handoff":
 		result, ok := outcome.(workflow.HandoffResult)
 		if !ok {

@@ -2491,6 +2491,125 @@
         }
       }
     },
+    "/v1/projects/{project_id}/issues/{issue_id}/release": {
+      "post": {
+        "operationId": "releaseClaim",
+        "tags": [
+          "Workflow"
+        ],
+        "summary": "Release a claimed issue by exact holder or stale threshold",
+        "description": "For td unstart --session/--stale --force. Revalidates the expected holder and, in stale mode, liveness and caller lineage inside the write transaction. Exact mode permits a supervisor to release a named holder regardless of liveness. Records unstart history and activity in the same receipt.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "issue": {
+                          "$ref": "#/components/schemas/IssueDTO"
+                        }
+                      },
+                      "required": [
+                        "issue"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "ok",
+                    "data"
+                  ]
+                }
+              }
+            },
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Strong quoted aggregate revision."
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error401"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error409"
+          },
+          "500": {
+            "$ref": "#/components/responses/Error500"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error503"
+          },
+          "412": {
+            "$ref": "#/components/responses/Error412"
+          },
+          "428": {
+            "$ref": "#/components/responses/Error428"
+          }
+        },
+        "x-origin": "proposed",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ProjectID"
+            }
+          },
+          {
+            "name": "issue_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          {
+            "$ref": "#/components/parameters/Session"
+          },
+          {
+            "$ref": "#/components/parameters/Operation"
+          },
+          {
+            "$ref": "#/components/parameters/Revision"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClaimReleaseInput"
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/projects/{project_id}/issues/{issue_id}/reviews": {
       "post": {
         "operationId": "recordReview",
@@ -9028,6 +9147,35 @@
           "noop",
           "parent_status_updates",
           "auto_unblocked"
+        ]
+      },
+      "ClaimReleaseInput": {
+        "type": "object",
+        "properties": {
+          "holder": {
+            "type": "string",
+            "minLength": 1
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "session",
+              "stale"
+            ]
+          },
+          "stale_seconds": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false,
+        "description": "Exact session release ignores liveness. Stale release requires positive stale_seconds, excludes caller lineage, and checks holder, issue revision, session/issue/activity timestamps again in the write transaction.",
+        "required": [
+          "holder",
+          "mode"
         ]
       },
       "ReviewInput": {
