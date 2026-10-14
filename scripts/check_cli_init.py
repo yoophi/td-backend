@@ -14,6 +14,7 @@ import subprocess
 import tempfile
 import time
 import urllib.request
+import uuid
 
 
 def main():
@@ -33,6 +34,8 @@ def main():
             'commit', '--allow-empty', '-qm', 'test fixture')
         token = secrets.token_hex(32)
         env = dict(os.environ, TD_BACKEND_BOOTSTRAP_TOKEN=token, TD_BACKEND_TOKEN=token)
+        env["TD_BACKEND_CONTEXT_ROOT"] = str(root / "caller-contexts")
+        env["TD_SESSION_ID"] = "real-backend-cli-smoke"
         env.pop('TD_FEATURE_SYNC_AUTOSYNC', None)
         env.pop('TD_FEATURE_SYNC_CLI', None)
         with socket.socket() as sock:
@@ -79,11 +82,43 @@ def main():
                             '--project-id=' + project)['backend']['project_id'] == project
                 init(repo, '--project-id=prj_0199dc38-1200-7000-8000-000000000001', success=False)
                 init(repo, '--project-id=invalid', success=False)
+                def post(path, body):
+                    request = urllib.request.Request(endpoint + path,
+                        data=json.dumps(body).encode(), method='POST', headers={
+                            'Authorization': 'Bearer ' + token,
+                            'Content-Type': 'application/json',
+                            'Idempotency-Key': str(uuid.uuid4()),
+                        })
+                    if caller:
+                        request.add_header('X-TD-Session', caller)
+                    with urllib.request.urlopen(request, timeout=15) as response:
+                        return json.load(response)['data']
+                caller = ''
+                base = '/v1/projects/' + project
+                caller = post(base + '/sessions', {'name': 'smoke fixture',
+                    'context_id': 'real-cli-show-fixture', 'agent_type': 'test'})['session']['id']
+                parent = post(base + '/issues', {'title': 'Real backend parent feature',
+                    'type': 'epic', 'priority': 'P1'})['issue']['id']
+                child = post(base + '/issues', {'title': 'Real backend child task',
+                    'type': 'task', 'priority': 'P2', 'parent_id': parent})['issue']['id']
+                def show(*flags):
+                    result = subprocess.run([args.cli, '--work-dir', str(repo),
+                        'show', '--json', *flags], env=env, capture_output=True,
+                        text=True, timeout=30)
+                    if result.returncode:
+                        raise RuntimeError(result.stderr)
+                    return json.loads(result.stdout)
+                detail = show(parent)
+                assert detail['id'] == parent and detail['revision'].startswith('r-')
+                assert show(parent[:10])['id'] == parent
+                assert show(parent, '--children')['children'][0]['id'] == child
+                assert show(parent, '--tree')['children'][0]['id'] == child
+                assert len(show(parent, child)) == 2
                 for directory in (repo, attached):
                     assert not (directory / '.todos/issues.db').exists(), 'local SQLite fallback'
                     config = (directory / '.todos/config.json').read_text()
                     assert token not in config, 'token persisted in config'
-                print('PASS: real backend create, repeat init, worktree reuse, explicit attach, conflict validation, no local DB/token')
+                print('PASS: real backend init/reuse/worktree/attach, show/prefix/children/tree/multiple, no local DB/token')
             finally:
                 server.terminate()
                 try:

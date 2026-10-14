@@ -294,3 +294,11 @@ pagination restart/불안정 snapshot/중복·빈 페이지·nullable DTO/cancel
 CLI integration branch `575b314`에서 backendstore.Open과 원격 Reader를 연결했습니다. 공유 Project association과 별개로 device/checkout/branch/agent/명시 context/credential digest별 등록 intent를 사용자 config 디렉터리에 저장합니다. 등록 UUIDv4 key와 immutable command를 HTTP 전에 원자 기록하고, 응답 유실이나 session-ID 저장 실패 시 같은 key/payload로 복구합니다. credential 변경 시 다른 Session context를 쓰며 token 원문은 저장하지 않습니다. 파일은 0600이고 HTTP 중 config lock을 유지하지 않습니다. Project 접근은 등록된 Session으로 다시 확인합니다.
 
 OpenReader의 backend 경로는 typed client로 조회하며, 실제 checkout을 명시하는 OpenReaderWithContext도 제공합니다. Reader Record는 observed revision을 보존합니다. 로컬 SQLite와 GitHub client는 사용하지 않습니다. 유실 등록 복구/동시 등록 중복 방지/명시 context·credential·checkout 분리/permissions/token 미저장 및 Reader의 Session header/revision/cancel/no-DB 회귀가 race와 vet를 통과했습니다. CLI list/show/query/search/stats 직접 dispatch는 다음 작업이며 gh-15 전체를 완료 처리하지 않았습니다. 기존 전체 make test(60m)는 아직 실행 중입니다.
+
+## gh-15 진행 — 원격 show와 실제 CLI 조회 검증
+
+CLI integration branch `1ae3800`에서 show/context/view/get의 backend 분기를 연결했습니다. 서버 detail의 Issue/revision/review history/log/handoff/comment/file/dependency/children을 읽고 JSON/short/long/Markdown, 단일·복수 ID와 unique prefix, Session focus 또는 단일 활성 Issue 선택을 지원합니다. tree는 일관된 전체 목록에서 구성하고 cycle·없는 root를 거절합니다. 여러 detail과 human 문자열을 출력 전에 준비하여 중간 실패를 성공처럼 출력하지 않습니다.
+
+상세 JSON·prefix·focus·children/tree·복수 Issue·short 출력, 잘못된 format의 무요청 거절과 복수 조회 중 실패 시 무출력 회귀가 race/vet를 통과했습니다. 실제 서버/SQLite에 epic/child를 생성한 뒤 CLI show/prefix/children/tree/multiple JSON을 검증하도록 `scripts/check_cli_init.py`를 확장했고 통과했습니다. 임시 Caller context도 격리합니다. list/query/search/stats와 workflow/monitor/serve는 계속 진행합니다.
+
+기존 전체 make test는 모든 non-cmd 패키지가 통과했지만 cmd에서 새 --project-id에 따른 inventory mismatch와 누적 실행 60분 timeout으로 종료했습니다. timeout 당시 활성 테스트는 TestGitHubTransitionRoutingAndFocus(12초)였으며 단일 테스트가 60분 멈춘 증거는 아닙니다. inventory를 갱신한 뒤 전체 gate를 다시 확인할 예정이며 아직 gh-14를 완료하지 않았습니다.
