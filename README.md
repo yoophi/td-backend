@@ -1,13 +1,14 @@
 # td-backend
 
-`td`의 세 번째 store로 사용할 HTTP backend를 설계하는 프로젝트입니다. **Go · SQLite · hexagonal architecture**를 사용하며 `td CLI`, `td monitor`, `td serve`를 통한 `td-gui` 연결을 대상으로 합니다.
+`td`의 세 번째 store로 사용할 HTTP backend입니다. **Go · SQLite · hexagonal architecture**를 사용하며 `td CLI`, `td monitor`, `td serve`와 `td-gui`를 연결합니다.
 
-현재 **단계별 구현 중**입니다. Go/SQLite 서버의 이슈·workflow·조회·Undo API를 구현했으며 td client 연동을 진행합니다. 아래 td 명령은 client adapter 구현 후 제공할 목표 사용법입니다. 완료 범위는 [구현 진행 기록](docs/implementation-progress.md)과 td task 상태를 확인합니다.
+서버와 td client adapter는 구현되어 있습니다. `td`의 원격 store 변경은 [CLI 브랜치](https://github.com/yoophi/td/tree/feat/td-backend-store)에 있습니다. 검증 범위와 남은 작업은 [통합 검증 기록](docs/integration-report.md)과 [구현 진행 기록](docs/implementation-progress.md)을 확인하세요.
 
-## 목표 사용법
+## 사용법
 
 ```sh
 # 신규 Project 생성: 서버가 ID를 발급하고 td가 저장
+export TD_BACKEND_TOKEN='서버의 bootstrap token'
 td init --store=td-backend,http://localhost:7000
 
 # 다른 checkout에서 기존 Project 연결
@@ -21,7 +22,7 @@ td serve
 td-gui
 ```
 
-최초 init에는 Project ID가 필요 없습니다. 생성 응답의 ID를 `.todos/config.json`에 저장하고 이후 init에서는 재사용합니다. 기존 Project 연결에는 전체 ID를 지정합니다. 이미 저장된 연결과 다른 URL/ID가 주어지면 자동으로 덮어쓰지 않습니다. CLI의 `feat/td-backend-store` 브랜치에서 init, 읽기 명령과 주요 Issue 생성·수정·workflow 명령을 지원합니다. `approve`는 직접 승인과 `--record-only` 기록, 단일 후보 자동 선택 및 `--all` 일괄 처리를 지원합니다. monitor·serve 연결도 진행 중입니다.
+최초 init에는 Project ID가 필요 없습니다. 생성 응답의 ID를 `.todos/config.json`에 저장하고 이후 init에서는 재사용합니다. 기존 Project 연결에는 전체 ID를 지정합니다. 이미 저장된 연결과 다른 URL/ID가 주어지면 자동으로 덮어쓰지 않습니다. `approve`는 직접 승인과 `--record-only` 기록, 단일 후보 자동 선택 및 `--all` 일괄 처리를 지원합니다. `unstart --session/--stale`은 기본적으로 미리보기이며 `--force`로 해제합니다.
 
 ## 연결 구조
 
@@ -71,7 +72,7 @@ Project ID는 생성 후 불변이며 이름·Git remote·경로에서 파생하
 
 | 파일 | 내용 |
 | --- | --- |
-| [swagger.json](swagger.json) | 원격 backend, `http://localhost:7000`, 50개 path / 64개 operation |
+| [swagger.json](swagger.json) | 원격 backend, `http://localhost:7000`, 54개 path / 69개 operation |
 | [api/td-serve.swagger.json](api/td-serve.swagger.json) | 로컬 serve facade와 GUI 호환 HTTP 계약 |
 | [docs/api-design.md](docs/api-design.md) | endpoint, session, 원자성, monitor 및 GUI 연결 |
 | [docs/backend-architecture.md](docs/backend-architecture.md) | Go package, ports/adapters, domain, transaction, 운영·검증 |
@@ -79,6 +80,7 @@ Project ID는 생성 후 불변이며 이름·Git remote·경로에서 파생하
 | [docs/id-policy.md](docs/id-policy.md) | Project ID와 init/operation key 생성 규칙 |
 | [docs/implementation-plan.md](docs/implementation-plan.md) | td feature/task, dependencies와 완료 기준 |
 | [docs/implementation-progress.md](docs/implementation-progress.md) | 구현한 범위와 검증 결과 |
+| [docs/integration-report.md](docs/integration-report.md) | 실제 서버·CLI·GUI 통합 검증 |
 | [docs/store-integration.md](docs/store-integration.md) | td 소스 분석과 CLI/monitor/serve adapter 수정 지점 |
 | [CONTEXT.md](CONTEXT.md) | 도메인 용어 |
 | [docs/adr/0001-single-sqlite-transaction-boundary.md](docs/adr/0001-single-sqlite-transaction-boundary.md) | 단일 SQLite 파일과 transaction 결정 |
@@ -98,11 +100,11 @@ docker run --rm \
   docker.swagger.io/swaggerapi/swagger-ui
 ```
 
-브라우저에서 `http://127.0.0.1:8080`을 엽니다. serve 명세는 volume의 파일을 `api/td-serve.swagger.json`으로 바꾸면 됩니다. 구현된 backend endpoint는 인증 정보를 설정해 실행할 수 있습니다. 아직 구현 중인 endpoint와 serve 명세는 설계 계약입니다.
+브라우저에서 `http://127.0.0.1:8080`을 엽니다. serve 명세는 volume의 파일을 `api/td-serve.swagger.json`으로 바꾸면 됩니다. 인증이 필요한 backend endpoint는 Swagger UI에서 bearer token을 설정합니다.
 
 ## 명세 재생성 및 검증
 
-Go 서버는 다음 명령으로 빌드·실행·검증합니다. 기본 DB는 `./data/td-backend.db`, listen은 `127.0.0.1:7000`입니다. 아직 구현하지 않은 API는 사용할 수 없습니다.
+Go 서버는 다음 명령으로 빌드·실행·검증합니다. 기본 DB는 `./data/td-backend.db`, listen은 `127.0.0.1:7000`입니다.
 
 ```sh
 make build
@@ -114,7 +116,7 @@ export TD_BACKEND_BOOTSTRAP_TOKEN="$(openssl rand -hex 32)"
 curl http://127.0.0.1:7000/healthz
 ```
 
-Bootstrap token은 32자 이상이며 digest만 SQLite에 저장합니다. 설정 token을 변경하면 기존 bootstrap credential은 폐기됩니다. `/healthz` 외 구현된 API는 bearer token을 요구합니다. 현재 project·Session 등록/조회, Issue CRUD와 workflow/review/handoff, dependency·file·comment·log·activity, Board CRUD·TDQ 카드 조회·pin/unpin·move, Note CRUD·pin/archive, WorkSession start/read/tag/end와 Session Focus API를 구현했습니다. 일반 TDQ query·목록 검색과 Monitor snapshot 조회도 구현했습니다. Stats·labels 조회를 구현했습니다. Operation audit 조회도 지원합니다. Issue·관계·파일·활동과 Board·Note·Focus·WorkSession의 조건부 Undo를 지원합니다. 변경 token 조회와 refresh/ping SSE도 지원합니다. CLI·monitor·serve/GUI 통합은 진행 중입니다. 구현 및 검증 기록은 [진행 기록](docs/implementation-progress.md)을 참고하세요. Session 등록을 제외한 project-scoped 조회는 등록된 `X-TD-Session`도 필요합니다.
+Bootstrap token은 32자 이상이며 digest만 SQLite에 저장합니다. 설정 token을 변경하면 기존 bootstrap credential은 폐기됩니다. `/healthz` 외 API는 bearer token을 요구합니다. Project·Session 등록, Issue CRUD/workflow/review/handoff, 관계·파일·활동, Board, Note, Work Session, Focus, TDQ query, Monitor snapshot, Stats·labels, operation audit·Undo, 변경 token과 refresh/ping SSE를 지원합니다. Session 등록을 제외한 project-scoped 조회는 등록된 `X-TD-Session`도 필요합니다.
 
 OpenAPI 및 DDL 명세는 Python 3와 개발 의존성으로 검증합니다.
 
