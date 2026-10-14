@@ -288,6 +288,22 @@ def main():
                     capture_output=True, text=True, timeout=30)
                 assert linked.returncode == 0, linked.stdout + linked.stderr
                 assert json.loads(linked.stdout)[0]['file_path'] == 'backend-linked.go'
+                (repo / 'backend-extra.go').write_text('package fixture\n')
+                def cli_file_change(action, pattern):
+                    result = subprocess.run([args.cli, '--work-dir', str(repo),
+                        action, work['id'], pattern, '--json'], env=env,
+                        capture_output=True, text=True, timeout=30)
+                    if result.returncode:
+                        raise RuntimeError(result.stdout + result.stderr)
+                    return json.loads(result.stdout)
+                assert cli_file_change('link', 'backend-extra.go')['action'] == 'linked'
+                assert cli_file_change('link', 'backend-extra.go')['noop']
+                assert sorted(row['file_path'] for row in json.loads(subprocess.run(
+                    [args.cli, '--work-dir', str(repo), 'files', work['id'], '--json'],
+                    env=env, capture_output=True, text=True, check=True).stdout)) == [
+                        'backend-extra.go', 'backend-linked.go']
+                assert cli_file_change('unlink', 'backend-extra.go')['action'] == 'unlinked'
+                assert cli_file_change('unlink', 'backend-extra.go')['noop']
                 def cli_dependency(*tail):
                     result = subprocess.run([args.cli, '--work-dir', str(repo),
                         'dep', *tail, '--json'], env=env, capture_output=True,
@@ -315,6 +331,13 @@ def main():
                 assert cli_dependency('rm', work['id'], child)['already_exists']
                 assert show(work['id'])['dependencies'] == []
                 assert cli_relation('depends-on', work['id'])['dependencies'] == []
+                link_dep = subprocess.run([args.cli, '--work-dir', str(repo),
+                    'link', work['id'], '--depends-on=' + child, '--json'],
+                    env=env, capture_output=True, text=True, timeout=30)
+                assert link_dep.returncode == 0, link_dep.stdout + link_dep.stderr
+                assert json.loads(link_dep.stdout)['action'] == 'dependency_added'
+                assert cli_relation('depends-on', work['id'])['dependencies'] == [child]
+                assert cli_dependency('rm', work['id'], child)['action'] == 'dependency_removed'
                 def cli_workflow(action):
                     result = subprocess.run([args.cli, '--work-dir', str(repo),
                         action, work['id'], '--reason=workflow smoke', '--json'],
@@ -460,7 +483,7 @@ def main():
                     assert not (directory / '.todos/issues.db').exists(), 'local SQLite fallback'
                     config = (directory / '.todos/config.json').read_text()
                     assert token not in config, 'token persisted in config'
-                print('PASS: real backend init/reuse/worktree/attach, show/prefix/children/tree/multiple, TDQ fields/hierarchy/comments, ranked log search, list filters/TDQ, info statistics, CLI create/dependency/blocks and dep add/rm/query, files read, deleted listing/write/reason, workflow status/field update/start/unstart/block/unblock/reopen, comments/log/handoff/review/reject/approve auto/all/close, no local DB/token')
+                print('PASS: real backend init/reuse/worktree/attach, show/prefix/children/tree/multiple, TDQ fields/hierarchy/comments, ranked log search, list filters/TDQ, info statistics, CLI create/dependency/blocks and dep add/rm/query, files read/link/unlink, deleted listing/write/reason, workflow status/field update/start/unstart/block/unblock/reopen, comments/log/handoff/review/reject/approve auto/all/close, no local DB/token')
             finally:
                 server.terminate()
                 try:

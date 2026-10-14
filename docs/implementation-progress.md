@@ -420,3 +420,7 @@ CLI `dep <id>`, `depends-on <id>`, `blocked-by <id>`가 일관된 backend 스냅
 ## gh-16 진행 — files 조회
 
 CLI `files <id>`가 일관된 backend 상세 조회에서 연결 파일을 읽고, 기존 CLI의 로컬 파일 상태 비교를 사용해 변경 여부를 표시합니다. 실제 SQLite 서버 smoke에서 원격 연결 파일의 CLI 목록 조회를 확인했습니다. `link`/`unlink` 쓰기는 후속 작업입니다.
+
+## gh-16 진행 — link/unlink 파일 변경
+
+CLI `link`와 `unlink`를 backend의 파일 목록 교체 API에 연결했습니다. 최초 요청 준비 시 파일 패턴·실제 경로·SHA와 현재 원격 파일 목록을 읽고, 관측 revision과 함께 영속 요청에 보관합니다. 같은 파일 상태를 다시 요청하면 noop으로 처리합니다. 응답 Issue ID·revision을 확인하고, `link --depends-on`은 의존 관계 추가 명령으로 연결했습니다. 실제 SQLite 서버에서 파일 추가·반복 noop·목록·해제·반복 noop과 의존 관계 별칭을 확인했습니다. 원격 `relation.files`는 전체 목록 교체이므로 현재 승인 기록을 무효화하는 서버 정책을 그대로 따릅니다.
