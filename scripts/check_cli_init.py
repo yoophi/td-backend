@@ -616,11 +616,40 @@ def main():
                 assert any(item['id'] == undo_fixture['id'] for item in undone['affected_issues'])
                 assert any(item['id'] == undo_fixture['id'] for item in cli_history('deleted'))
                 assert cli_history('undo', '--list')[0]['undone']
+                assert cli_ws('end')['work_session']['id'] == own_work_session
+                handoff_ids = [post(base + '/issues', {
+                    'title': f'Work session handoff fixture {index}', 'type': 'task'})['issue']['id']
+                    for index in range(2)]
+                handoff_ws = cli_ws('start', 'Remote handoff workflow')['work_session']['id']
+                for issue_id in handoff_ids:
+                    assert cli_ws('tag', issue_id)['issues'] == [issue_id]
+                    assert show(issue_id)['status'] == 'in_progress'
+                assert {log['issue_id'] for log in cli_ws('log', 'Shared decision', '--decision')['logs']} == set(handoff_ids)
+                continuing = cli_ws('handoff', '--continue')
+                assert continuing['work_session'] == handoff_ws and not continuing['ended']
+                assert set(continuing['issues']) == set(handoff_ids)
+                for issue_id in handoff_ids:
+                    assert show(issue_id)['handoff']['decisions'] == ['Shared decision']
+                handoff_file = root / 'handoff-done.txt'
+                handoff_file.write_text('Final verification\n')
+                final_handoff = cli_ws('handoff', '--done=@' + str(handoff_file),
+                    '--remaining=General follow-up',
+                    '--remaining=Specific follow-up (' + handoff_ids[0] + ')', '--review')
+                assert final_handoff['ended'] and final_handoff['review_requested']
+                assert set(final_handoff['review_requests']) == set(handoff_ids)
+                assert cli_ws('current')['work_session'] is None
+                assert show(handoff_ids[0])['handoff']['remaining'] == ['General follow-up', 'Specific follow-up']
+                assert show(handoff_ids[1])['handoff']['remaining'] == ['General follow-up']
+                assert all(show(issue_id)['status'] == 'in_review' for issue_id in handoff_ids)
+                empty_ws = cli_ws('start', 'Empty handoff workflow')['work_session']['id']
+                empty_handoff = cli_ws('handoff')
+                assert empty_handoff['work_session'] == empty_ws and empty_handoff['ended']
+                assert empty_handoff['issues'] == []
                 for directory in (repo, attached):
                     assert not (directory / '.todos/issues.db').exists(), 'local SQLite fallback'
                     config = (directory / '.todos/config.json').read_text()
                     assert token not in config, 'token persisted in config'
-                print('PASS: real backend init/reuse/worktree/attach, show/prefix/children/tree/multiple, board CRUD/positions, note lifecycle including deleted/restore, work-session lifecycle/tag/untag/log, TDQ fields/hierarchy/comments, ranked log search, list filters/TDQ, info statistics, CLI create/dependency/blocks and dep add/rm/query, files read/link/unlink, deleted listing/write/reason, workflow status/field update/start/unstart/block/unblock/reopen, comments/log/handoff/review/reject/approve auto/all/close, last/undo, no local DB/token')
+                print('PASS: real backend init/reuse/worktree/attach, show/prefix/children/tree/multiple, board CRUD/positions, note lifecycle including deleted/restore, work-session lifecycle/tag/untag/log/handoff, TDQ fields/hierarchy/comments, ranked log search, list filters/TDQ, info statistics, CLI create/dependency/blocks and dep add/rm/query, files read/link/unlink, deleted listing/write/reason, workflow status/field update/start/unstart/block/unblock/reopen, comments/log/handoff/review/reject/approve auto/all/close, last/undo, no local DB/token')
             finally:
                 server.terminate()
                 try:
