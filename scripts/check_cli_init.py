@@ -150,6 +150,18 @@ def main():
                 assert renamed['name'] == 'Renamed board' and renamed['view_mode'] == 'backlog'
                 assert cli_board('delete', custom_board['id'])['deleted']
                 assert len(cli_board('list')) == 1
+                remote_note = post(base + '/notes', {'title': 'Remote note fixture',
+                    'content': 'Shared backend content', 'pinned': True})['note']
+                note_list = subprocess.run([args.cli, '--work-dir', str(repo),
+                    'note', 'list', '--json'], env=env, capture_output=True,
+                    text=True, timeout=30)
+                assert note_list.returncode == 0, note_list.stderr
+                assert [note['id'] for note in json.loads(note_list.stdout)] == [remote_note['id']]
+                note_show = subprocess.run([args.cli, '--work-dir', str(repo),
+                    'note', 'show', remote_note['id'], '--json'], env=env,
+                    capture_output=True, text=True, timeout=30)
+                assert note_show.returncode == 0, note_show.stderr
+                assert json.loads(note_show.stdout)['content'] == 'Shared backend content'
                 post(base + '/issues/' + child + '/comments', {'text': 'ready for remote query'}, child_record['revision'])
                 def query(expression):
                     result = subprocess.run([args.cli, '--work-dir', str(repo),
@@ -535,7 +547,7 @@ def main():
                     assert not (directory / '.todos/issues.db').exists(), 'local SQLite fallback'
                     config = (directory / '.todos/config.json').read_text()
                     assert token not in config, 'token persisted in config'
-                print('PASS: real backend init/reuse/worktree/attach, show/prefix/children/tree/multiple, board CRUD/positions, TDQ fields/hierarchy/comments, ranked log search, list filters/TDQ, info statistics, CLI create/dependency/blocks and dep add/rm/query, files read/link/unlink, deleted listing/write/reason, workflow status/field update/start/unstart/block/unblock/reopen, comments/log/handoff/review/reject/approve auto/all/close, last/undo, no local DB/token')
+                print('PASS: real backend init/reuse/worktree/attach, show/prefix/children/tree/multiple, board CRUD/positions, note list/show, TDQ fields/hierarchy/comments, ranked log search, list filters/TDQ, info statistics, CLI create/dependency/blocks and dep add/rm/query, files read/link/unlink, deleted listing/write/reason, workflow status/field update/start/unstart/block/unblock/reopen, comments/log/handoff/review/reject/approve auto/all/close, last/undo, no local DB/token')
             finally:
                 server.terminate()
                 try:
