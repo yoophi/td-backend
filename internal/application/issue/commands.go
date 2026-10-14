@@ -2,21 +2,26 @@ package issue
 
 import "github.com/yoophi/td-backend/internal/domain"
 
+type BlockObservation struct {
+	IssueID  string `json:"issue_id"`
+	Revision string `json:"revision"`
+}
 type CreateCommand struct {
-	Title         string           `json:"title"`
-	Description   string           `json:"description"`
-	Acceptance    string           `json:"acceptance"`
-	Type          *domain.Type     `json:"type"`
-	Priority      *domain.Priority `json:"priority"`
-	Points        int              `json:"points"`
-	Labels        []string         `json:"labels"`
-	ParentID      string           `json:"parent_id"`
-	Sprint        string           `json:"sprint"`
-	Minor         bool             `json:"minor"`
-	DueDate       string           `json:"due_date"`
-	DeferUntil    string           `json:"defer_until"`
-	CreatedBranch string           `json:"created_branch"`
-	DependsOn     []string         `json:"depends_on"`
+	Title         string             `json:"title"`
+	Description   string             `json:"description"`
+	Acceptance    string             `json:"acceptance"`
+	Type          *domain.Type       `json:"type"`
+	Priority      *domain.Priority   `json:"priority"`
+	Points        int                `json:"points"`
+	Labels        []string           `json:"labels"`
+	ParentID      string             `json:"parent_id"`
+	Sprint        string             `json:"sprint"`
+	Minor         bool               `json:"minor"`
+	DueDate       string             `json:"due_date"`
+	DeferUntil    string             `json:"defer_until"`
+	CreatedBranch string             `json:"created_branch"`
+	DependsOn     []string           `json:"depends_on"`
+	Blocks        []BlockObservation `json:"blocks,omitempty"`
 }
 type PatchCommand struct {
 	Title       *string          `json:"title"`

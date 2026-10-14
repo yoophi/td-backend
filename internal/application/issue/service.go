@@ -153,6 +153,37 @@ func (s *Service) Create(ctx context.Context, c domain.Caller, m port.Mutation, 
 		if e = SaveEffect(command, c.ProjectID, nil, State{Issue: i, Dependencies: dependencies}); e != nil {
 			return nil, e
 		}
+		blocked := map[string]bool{}
+		for _, observation := range cmd.Blocks {
+			if strings.TrimSpace(observation.IssueID) == "" || blocked[observation.IssueID] {
+				return nil, invalid("blocks", "nonempty unique Issue IDs required")
+			}
+			blocked[observation.IssueID] = true
+			revision := `"` + observation.Revision + `"`
+			if _, e = domain.Observe(revision); e != nil {
+				return nil, invalid("blocks.revision", "expected r-N observed revision")
+			}
+			before, e := relationState(command, c, observation.IssueID, revision)
+			if e != nil {
+				return nil, e
+			}
+			if e = validateDependencyEdge(command, c, observation.IssueID, i.ID); e != nil {
+				return nil, e
+			}
+			depID, e := s.ID("dependency")
+			if e != nil {
+				return nil, e
+			}
+			edge := port.Dependency{ID: depID, IssueID: observation.IssueID, DependsOnID: i.ID}
+			if e = tx.IssueWrites().AddDependency(ctx, c.ProjectID, edge); e != nil {
+				return nil, e
+			}
+			after := before
+			after.Dependencies = append(append([]port.Dependency{}, before.Dependencies...), edge)
+			if e = saveRelation(command, c, before, &after); e != nil {
+				return nil, e
+			}
+		}
 		return Result{Issue: i}, nil
 	})
 }

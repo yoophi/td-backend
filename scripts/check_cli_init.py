@@ -174,7 +174,7 @@ def main():
                     'Remote CLI creation fixture', '--type=story', '--priority=p1',
                     '--points=3', '--labels=cli,smoke', '--minor',
                     '--description-file=' + str(description_file), '--parent=' + parent,
-                    '--depends-on=' + child, '--json'], env=env,
+                    '--depends-on=' + child, '--blocks=' + parent, '--json'], env=env,
                     capture_output=True, text=True, timeout=30)
                 if result.returncode:
                     raise RuntimeError(result.stderr)
@@ -185,11 +185,14 @@ def main():
                 assert created['description'] == description_file.read_text()
                 created_detail = show(created['id'])
                 assert created_detail['dependencies'][0]['depends_on_id'] == child
+                parent_detail = show(parent)
+                assert any(edge['depends_on_id'] == created['id'] for edge in parent_detail['dependencies'])
+                assert parent_detail['revision'] == 'r-2'
                 for directory in (repo, attached):
                     assert not (directory / '.todos/issues.db').exists(), 'local SQLite fallback'
                     config = (directory / '.todos/config.json').read_text()
                     assert token not in config, 'token persisted in config'
-                print('PASS: real backend init/reuse/worktree/attach, show/prefix/children/tree/multiple, TDQ fields/hierarchy/comments, ranked log search, list filters/TDQ, info statistics, CLI create/dependency, no local DB/token')
+                print('PASS: real backend init/reuse/worktree/attach, show/prefix/children/tree/multiple, TDQ fields/hierarchy/comments, ranked log search, list filters/TDQ, info statistics, CLI create/dependency/blocks, no local DB/token')
             finally:
                 server.terminate()
                 try:

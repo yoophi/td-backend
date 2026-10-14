@@ -79,28 +79,8 @@ func (s *Service) AddDependency(ctx context.Context, c domain.Caller, m port.Mut
 		if _, e = tx.Issues().Get(ctx, c.ProjectID, cmd.DependsOn, false); e != nil {
 			return nil, e
 		}
-		stack := []string{cmd.DependsOn}
-		seen := map[string]bool{}
-		for len(stack) > 0 {
-			if e = ctx.Err(); e != nil {
-				return nil, e
-			}
-			target := stack[len(stack)-1]
-			stack = stack[:len(stack)-1]
-			if target == id {
-				return nil, invalid("depends_on", "dependency cycle")
-			}
-			if seen[target] {
-				continue
-			}
-			seen[target] = true
-			edges, e := tx.Issues().Dependencies(ctx, c.ProjectID, target)
-			if e != nil {
-				return nil, e
-			}
-			for _, edge := range edges {
-				stack = append(stack, edge.DependsOnID)
-			}
+		if e = validateDependencyEdge(command, c, id, cmd.DependsOn); e != nil {
+			return nil, e
 		}
 		depID, e := s.ID("dependency")
 		if e != nil {
@@ -181,4 +161,33 @@ func (s *Service) ReplaceFiles(ctx context.Context, c domain.Caller, m port.Muta
 		}
 		return Result{Issue: after.Issue}, nil
 	})
+}
+
+func validateDependencyEdge(command operation.CommandContext, c domain.Caller, id, dependsOn string) error {
+	tx := command.Tx
+	ctx := tx.Context()
+	stack := []string{dependsOn}
+	seen := map[string]bool{}
+	for len(stack) > 0 {
+		if e := ctx.Err(); e != nil {
+			return e
+		}
+		target := stack[len(stack)-1]
+		stack = stack[:len(stack)-1]
+		if target == id {
+			return invalid("depends_on", "dependency cycle")
+		}
+		if seen[target] {
+			continue
+		}
+		seen[target] = true
+		edges, e := tx.Issues().Dependencies(ctx, c.ProjectID, target)
+		if e != nil {
+			return e
+		}
+		for _, edge := range edges {
+			stack = append(stack, edge.DependsOnID)
+		}
+	}
+	return nil
 }

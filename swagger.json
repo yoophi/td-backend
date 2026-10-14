@@ -8286,6 +8286,13 @@
             "items": {
               "type": "string"
             }
+          },
+          "blocks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BlockObservation"
+            },
+            "description": "Existing Issues that depend on the newly created Issue. All observed revisions are checked, dependency cycles rejected, and changes commit atomically with creation."
           }
         },
         "additionalProperties": false,
@@ -8947,6 +8954,24 @@
         "required": [
           "change_token"
         ]
+      },
+      "BlockObservation": {
+        "type": "object",
+        "properties": {
+          "issue_id": {
+            "type": "string",
+            "pattern": "^td-[0-9a-f]{16}$"
+          },
+          "revision": {
+            "type": "string",
+            "pattern": "^r-[1-9][0-9]*$"
+          }
+        },
+        "required": [
+          "issue_id",
+          "revision"
+        ],
+        "additionalProperties": false
       }
     },
     "parameters": {

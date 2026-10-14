@@ -2,7 +2,7 @@
 
 `td`의 세 번째 store로 사용할 HTTP backend를 설계하는 프로젝트입니다. **Go · SQLite · hexagonal architecture**를 사용하며 `td CLI`, `td monitor`, `td serve`를 통한 `td-gui` 연결을 대상으로 합니다.
 
-현재 **단계별 구현 중**입니다. Go 서버와 SQLite 저장 adapter, Project/Session 초기화·조회·인증 API를 구현했으며 이슈/workflow와 td client 연동을 진행합니다. 아래 td 명령은 client adapter 구현 후 제공할 목표 사용법입니다. 완료 범위는 [구현 진행 기록](docs/implementation-progress.md)과 td task 상태를 확인합니다.
+현재 **단계별 구현 중**입니다. Go/SQLite 서버의 이슈·workflow·조회·Undo API를 구현했으며 td client 연동을 진행합니다. 아래 td 명령은 client adapter 구현 후 제공할 목표 사용법입니다. 완료 범위는 [구현 진행 기록](docs/implementation-progress.md)과 td task 상태를 확인합니다.
 
 ## 목표 사용법
 
@@ -21,7 +21,7 @@ td serve
 td-gui
 ```
 
-최초 init에는 Project ID가 필요 없습니다. 생성 응답의 ID를 `.todos/config.json`에 저장하고 이후 init에서는 재사용합니다. 기존 Project 연결에는 전체 ID를 지정합니다. 이미 저장된 연결과 다른 URL/ID가 주어지면 자동으로 덮어쓰지 않습니다. 현재 td는 `td-backend` store 및 `--project-id` 옵션을 지원하지 않습니다.
+최초 init에는 Project ID가 필요 없습니다. 생성 응답의 ID를 `.todos/config.json`에 저장하고 이후 init에서는 재사용합니다. 기존 Project 연결에는 전체 ID를 지정합니다. 이미 저장된 연결과 다른 URL/ID가 주어지면 자동으로 덮어쓰지 않습니다. CLI의 `feat/td-backend-store` 브랜치에서 init, 읽기 명령과 create를 지원합니다. monitor·serve 및 나머지 변경 명령 연결은 진행 중입니다.
 
 ## 연결 구조
 
@@ -53,6 +53,8 @@ Domain과 application은 HTTP·SQLite 구현을 import하지 않습니다. 모�
 
 이슈 변경, review supersession, cascade, audit, operation receipt와 change token을 한 transaction으로 commit합니다. `If-Match`로 관측 revision을 검증하고 `Idempotency-Key`로 response 유실 뒤 중복 변경을 방지합니다. SSE는 `refresh`/`ping` 신호이며 client가 화면을 다시 조회합니다.
 
+Issue 생성의 `blocks`에는 대상 Issue ID와 관측 revision을 전달합니다. 새 Issue와 대상들의 의존성 변경은 한 transaction으로 처리하며, 충돌이나 순환이 있으면 전체를 취소합니다. CLI `create --blocks`는 서버의 `create_blocks` capability를 확인하고 이 계약을 사용합니다.
+
 ## ID 규칙
 
 | 값 | 형식 | 생성 주체 |
@@ -67,7 +69,7 @@ Project ID는 생성 후 불변이며 이름·Git remote·경로에서 파생하
 
 | 파일 | 내용 |
 | --- | --- |
-| [swagger.json](swagger.json) | 원격 backend, `http://localhost:7000`, 49개 path / 63개 operation |
+| [swagger.json](swagger.json) | 원격 backend, `http://localhost:7000`, 50개 path / 64개 operation |
 | [api/td-serve.swagger.json](api/td-serve.swagger.json) | 로컬 serve facade와 GUI 호환 HTTP 계약 |
 | [docs/api-design.md](docs/api-design.md) | endpoint, session, 원자성, monitor 및 GUI 연결 |
 | [docs/backend-architecture.md](docs/backend-architecture.md) | Go package, ports/adapters, domain, transaction, 운영·검증 |

@@ -344,3 +344,9 @@ CLI create를 durable RunIntent에 연결했습니다. title/positional type/typ
 응답 유실 이후 본문 파일이 변경돼도 기존 pending payload/key를 재사용하고 중복 생성하지 않는 회귀가 race/vet를 통과했습니다. 완료 이후 새 실행은 새 key를 쓰며, 잘못된 type/아직 미연결인 incoming --blocks는 생성 전에 거절합니다. 실제 서버/SQLite smoke에서 CLI create의 feature alias/priority/points/minor/본문 보존/parent/dependency 연결을 확인했습니다.
 
 Incoming --blocks는 기존 Issue의 관계도 변경해야 하므로 원자 처리와 복구 검증이 남아 있으며, 이번 기본 생성 단위를 전체 create/gh-16 완료로 분류하지 않습니다. update/delete/restore, workflow, activity/relations/files, boards/notes/ws와 Undo 연결도 계속 진행합니다.
+
+## gh-16 진행 — create --blocks 원자 생성
+
+생성 API에 `blocks: [{issue_id, revision}]`와 `create_blocks` capability를 추가했습니다. 새 Issue와 모든 대상의 관계·revision·review supersession·audit·Undo effect를 한 transaction에 저장합니다. 기존 생성 요청의 fingerprint를 유지하도록 비어 있는 blocks는 직렬화에서 제외합니다. CLI는 일관된 snapshot에서 ID prefix와 revision을 해석하고 immutable intent에 저장합니다.
+
+대상 중 하나의 stale revision, outgoing dependency와의 순환, 중복 대상에서 전체 rollback을 검증했습니다. 같은 key의 정확한 receipt 재생, 생성 Issue 및 복수 대상의 Undo도 HTTP/SQLite 회귀로 검증했습니다. Backend 전체 race/vet, OpenAPI와 GUI 계약 검사, CLI create/init race 및 vet, 실제 서버 CLI smoke가 통과했습니다. 이전 단위에서 미지원이던 incoming --blocks를 연결했으며, gh-16의 나머지 변경 명령은 계속 진행합니다.
