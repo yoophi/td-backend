@@ -227,11 +227,32 @@ def main():
                 cli_deletion('restore', another['id'], 'resume smoke')
                 assert sum(log['message'] == 'Deleted: partial smoke'
                     for log in show(another['id'])['logs']) == 1
+                def cli_status(value):
+                    result = subprocess.run([args.cli, '--work-dir', str(repo),
+                        'update', another['id'], '--status=' + value, '--json'],
+                        env=env, capture_output=True, text=True, timeout=30)
+                    if result.returncode:
+                        raise RuntimeError(result.stdout + result.stderr)
+                    return json.loads(result.stdout)
+                assert cli_status('in_progress')['issue']['status'] == 'in_progress'
+                assert cli_status('in_progress')['noop']
+                assert show(another['id'])['status'] == 'in_progress'
+                guarded = subprocess.run([args.cli, '--work-dir', str(repo),
+                    'update', another['id'], '--status=in_review', '--json'],
+                    env=env, capture_output=True, text=True, timeout=30)
+                assert guarded.returncode != 0
+                assert show(another['id'])['status'] == 'in_progress'
+                mixed = subprocess.run([args.cli, '--work-dir', str(repo),
+                    'update', another['id'], '--status=open', '--title=must-not-change',
+                    '--json'], env=env, capture_output=True, text=True, timeout=30)
+                assert mixed.returncode != 0
+                assert show(another['id'])['status'] == 'in_progress'
+                assert show(another['id'])['title'] != 'must-not-change'
                 for directory in (repo, attached):
                     assert not (directory / '.todos/issues.db').exists(), 'local SQLite fallback'
                     config = (directory / '.todos/config.json').read_text()
                     assert token not in config, 'token persisted in config'
-                print('PASS: real backend init/reuse/worktree/attach, show/prefix/children/tree/multiple, TDQ fields/hierarchy/comments, ranked log search, list filters/TDQ, info statistics, CLI create/dependency/blocks, deleted listing/write/reason, no local DB/token')
+                print('PASS: real backend init/reuse/worktree/attach, show/prefix/children/tree/multiple, TDQ fields/hierarchy/comments, ranked log search, list filters/TDQ, info statistics, CLI create/dependency/blocks, deleted listing/write/reason, workflow status, no local DB/token')
             finally:
                 server.terminate()
                 try:

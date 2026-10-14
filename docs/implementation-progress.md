@@ -362,3 +362,9 @@ Client 전체 race, CLI deleted routing/필터/오류 출력 race, vet 및 실�
 CLI `delete`·`restore`를 원격 API와 durable RunIntent에 연결했습니다. 삭제된 Issue까지 포함해 prefix를 해석하고 관측 revision으로 If-Match를 보냅니다. 응답 유실 시 저장한 key·요청 본문으로 receipt를 복구합니다. 여러 Issue 중 실패하면 완료된 ID와 중단 지점을 보고하고, 재실행은 이미 원하는 삭제 상태인 Issue를 건너뜁니다.
 
 API의 선택적 `reason`은 같은 transaction에서 progress log와 Undo effect에 반영되며, 기존 빈 본문 요청의 receipt fingerprint를 보존합니다. 삭제 응답은 `deleted`와 새 revision의 Issue를 함께 반환합니다. 실제 SQLite 서버에서 삭제·복원·사유 log·noop·부분 성공 재실행을 검증했고, 서버 receipt 재생 및 reason fingerprint 충돌도 테스트했습니다.
+
+## gh-16 진행 — update --status workflow 경로
+
+CLI `update --status`를 backend 전용 workflow endpoint에 연결했습니다. ID prefix와 관측 revision으로 immutable intent를 구성하고 응답의 ID·status를 확인합니다. 이미 목표 상태면 noop을 반환합니다. 여러 Issue 중 실패한 경우 완료 범위를 보고합니다. 일반 필드와 status를 함께 지정하면 미연결 다단계 동작을 쓰기 전에 거절합니다.
+
+실제 서버 smoke에서 open→in_progress, 동일 상태 noop, handoff 없는 in_review 정책 거부, 혼합 필드 입력의 무변경을 확인했습니다. status는 generic PATCH를 통과하지 않습니다. CLI vet와 관련 race 회귀를 실행했습니다.
