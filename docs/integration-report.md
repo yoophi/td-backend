@@ -16,6 +16,6 @@
 | 응답 유실 복구 | 별도 HTTP 프록시가 backend의 성공한 PATCH 응답을 잘라 CLI에 전달. 첫 명령은 uncertain write를 보고하고 동일 명령 재실행은 저장된 key로 성공. 실제 Issue revision `r-5`→`r-6`으로 한 번만 증가 |
 | 복합 update / claim sweep | 필드·status·comment·dependency 동시 변경, 의존성 교체·역방향 blocks, 다중 대상 누락 ID skip 확인. 거부된 status 전이는 409로 남고 앞선 필드 변경과 댓글 수는 재실행 뒤에도 중복되지 않음. `--session --force`, `--stale 100ms --force`가 각각 claim을 해제함 |
 
-백엔드 `make test`, `make check`, `make spec` 통과: OpenAPI 54 paths/69 operations, serve 47 paths, GUI contract 30 route/method pairs와 SQLite schema/rollback 검사 통과. CLI는 `go test ./cmd -run '^TestBackend'`, 해당 회귀의 race 검사, `go vet ./cmd ./internal/backendstore`, `make install`을 통과했습니다. CLI 전체 `make test`는 최종 실행 결과를 기록할 예정입니다.
+백엔드 `make test`, `make check`, `make spec` 통과: OpenAPI 54 paths/69 operations, serve 47 paths, GUI contract 30 route/method pairs와 SQLite schema/rollback 검사 통과. CLI는 `go test ./cmd -run '^TestBackend'`, 해당 회귀의 race 검사, `go vet ./cmd ./internal/backendstore`, `make install`을 통과했습니다. 최종 CLI `make test`도 모든 package가 통과했으며 가장 긴 `cmd` package는 3,533.142초가 걸렸습니다.
 
 브라우저의 실제 화면 렌더링은 이 환경에 사용 가능한 브라우저 surface가 없어 수행하지 않았습니다. GUI HTTP 계약, subprocess와 SSE는 실행 중인 `td-gui`에 직접 요청해 검증했습니다.
