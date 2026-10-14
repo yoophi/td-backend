@@ -128,11 +128,28 @@ def main():
                 assert [row['id'] for row in query('type = epic')] == [parent]
                 assert [row['id'] for row in query('descendant_of("' + parent + '")')] == [child]
                 assert [row['id'] for row in query('comment.text ~ "ready"')] == [child]
+                request = urllib.request.Request(endpoint + base + '/issues/' + child,
+                    headers={'Authorization': 'Bearer ' + token, 'X-TD-Session': caller})
+                with urllib.request.urlopen(request, timeout=15) as response:
+                    observed = json.load(response)['data']['issue']['revision']
+                post(base + '/issues/' + child + '/logs',
+                    {'message': 'remote log signal', 'type': 'progress'}, observed)
+                def search(text):
+                    result = subprocess.run([args.cli, '--work-dir', str(repo),
+                        'search', text, '--json'], env=env, capture_output=True,
+                        text=True, timeout=30)
+                    if result.returncode:
+                        raise RuntimeError(result.stderr)
+                    return json.loads(result.stdout)
+                ranked = search('signal')
+                assert len(ranked) == 1 and ranked[0]['Issue']['id'] == child
+                assert ranked[0]['MatchField'] == 'log'
+                assert search('ready') == [], 'ranked search unexpectedly included comments'
                 for directory in (repo, attached):
                     assert not (directory / '.todos/issues.db').exists(), 'local SQLite fallback'
                     config = (directory / '.todos/config.json').read_text()
                     assert token not in config, 'token persisted in config'
-                print('PASS: real backend init/reuse/worktree/attach, show/prefix/children/tree/multiple, TDQ fields/hierarchy/comments, no local DB/token')
+                print('PASS: real backend init/reuse/worktree/attach, show/prefix/children/tree/multiple, TDQ fields/hierarchy/comments, ranked log search, no local DB/token')
             finally:
                 server.terminate()
                 try:

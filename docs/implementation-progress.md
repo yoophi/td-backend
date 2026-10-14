@@ -310,3 +310,11 @@ CLI query의 backend 분기를 기존 TDQ 평가기에 연결했습니다. 전�
 기존 predicate/현재 Session/cross-entity와 sort/limit/max-scan 및 table/JSON/ids/count를 유지합니다. malformed query는 네트워크 전에 거절합니다. regular/comment/rework/Session predicate, scan cap 경고, token 변경·일시 오류 전체 재시작, 안정 오류 보존과 bounded retry 회귀가 race와 vet를 통과했습니다. 실제 서버/SQLite smoke에서 type, descendant_of 및 comment.text 조회도 통과했습니다. 댓글 생성 smoke는 API 계약대로 observed revision의 If-Match를 전달합니다.
 
 CLI inventory는 init --project-id 한 항목만 각 sync snapshot에 추가하여 f74ae2c 커밋·push했고 isolated inventory/GitHub transition 검증을 통과했습니다. 전체 release-safe make test는 TEST_TIMEOUT=120m으로 재실행 중입니다. list/search/stats 및 workflow/monitor/serve 연결은 계속 진행합니다.
+
+## gh-15 진행 — 원격 ranked search
+
+CLI search를 backend snapshot에 연결했습니다. GitHub와 backend의 순위 계산은 공통 함수로 추출하여 기존 SQLite LIKE wildcards와 filter/score/tie ordering을 유지합니다. backend의 lazy detail은 log와 최신 handoff를 검색하며 comment는 검색 대상에서 제외합니다. 모든 조회/순위 계산은 전후 change-token 확인을 통과한 뒤 출력합니다. status/type/priority/labels, limit과 show-score/JSON을 지원합니다.
+
+기존 GitHub search 및 원격 own-field/log 순위, status filter, score 출력과 comments 제외 회귀가 race/vet를 통과했습니다. 실제 서버/SQLite에 observed revision으로 log를 추가하고 log-only ranked search 및 comment 제외 smoke를 통과했습니다. CLI 구현은 e3f2cc0에 커밋했습니다.
+
+두 번째 전체 make test(120m)는 약 57분에 완료됐고 non-cmd 전체 및 cmd의 다른 테스트는 통과했습니다. 유일한 실패인 GitHub support matrix의 새 project-id 분류를 unsupported로 기록하여 3d842b5에 커밋·push했고 inventory/matrix isolated 검증이 통과했습니다. 초기화 gh-14 review/approve 상태 전환을 진행 중이며 실제 상태 확인 전 완료로 공지하지 않습니다. 최종 최신 CLI 전체 통합 gate는 gh-19에서 확인합니다.
