@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"bytes"
 	"github.com/yoophi/td-backend/internal/adapter/httpapi/receiptcodec"
 	"io"
 	"net/http"
@@ -86,23 +87,33 @@ func registerIssueMutations(mux *http.ServeMux, svc *issue.Service, protect func
 			route = "POST /v1/projects/{project_id}/issues/{issue_id}/restore"
 		}
 		mux.HandleFunc(route, protect(func(w http.ResponseWriter, r *http.Request) {
-			// These operations have no body. Reject ignored payloads rather than allowing
-			// different requests to share a fingerprint which discarded their content.
-			data, e := io.ReadAll(http.MaxBytesReader(w, r.Body, 1))
-			if e != nil || len(data) > 0 {
-				writeError(w, invalid("body", "request body must be empty"))
+			// Empty body remains compatible with existing receipts. A reason is
+			// fingerprinted with the mutation and written to activity atomically.
+			data, e := io.ReadAll(http.MaxBytesReader(w, r.Body, 1<<20))
+			if e != nil {
+				writeError(w, invalid("body", "request body exceeds limit or could not be read"))
 				return
 			}
-			m, e := mutation(r, struct{}{})
+			var cmd struct {
+				Reason string `json:"reason,omitempty"`
+			}
+			if len(data) != 0 {
+				r.Body = io.NopCloser(bytes.NewReader(data))
+				if e = decode(w, r, &cmd); e != nil {
+					writeError(w, e)
+					return
+				}
+			}
+			m, e := mutation(r, cmd)
 			if e != nil {
 				writeError(w, e)
 				return
 			}
 			var reply port.StoredReply
 			if restore {
-				reply, e = svc.Restore(r.Context(), caller(r), m, r.PathValue("issue_id"), r.Header.Get("If-Match"))
+				reply, e = svc.RestoreWithReason(r.Context(), caller(r), m, r.PathValue("issue_id"), r.Header.Get("If-Match"), cmd.Reason)
 			} else {
-				reply, e = svc.Delete(r.Context(), caller(r), m, r.PathValue("issue_id"), r.Header.Get("If-Match"))
+				reply, e = svc.DeleteWithReason(r.Context(), caller(r), m, r.PathValue("issue_id"), r.Header.Get("If-Match"), cmd.Reason)
 			}
 			finish(w, reply, e)
 		}))

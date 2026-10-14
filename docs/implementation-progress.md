@@ -356,3 +356,9 @@ Incoming --blocks는 기존 Issue의 관계도 변경해야 하므로 원자 처
 CLI `deleted`를 원격 목록 API에 연결했습니다. closed를 포함한 전체 페이지를 change token으로 검증한 다음 deleted_at이 있는 Issue만 JSON/일반 출력으로 전달합니다. 복원 준비에 필요한 개별 삭제 Issue 조회도 revision을 보존하는 Client 메서드로 추가했습니다. 조회 실패에서는 부분 결과를 출력하지 않습니다.
 
 Client 전체 race, CLI deleted routing/필터/오류 출력 race, vet 및 실제 Go/SQLite 서버 smoke가 통과했습니다. CLI commit은 `7125239`입니다. 삭제·복원 쓰기 자체와 사유 기록, 복수 Issue의 부분 완료 복구는 아직 미연결입니다.
+
+## gh-16 진행 — 원격 delete/restore 및 사유 원자 기록
+
+CLI `delete`·`restore`를 원격 API와 durable RunIntent에 연결했습니다. 삭제된 Issue까지 포함해 prefix를 해석하고 관측 revision으로 If-Match를 보냅니다. 응답 유실 시 저장한 key·요청 본문으로 receipt를 복구합니다. 여러 Issue 중 실패하면 완료된 ID와 중단 지점을 보고하고, 재실행은 이미 원하는 삭제 상태인 Issue를 건너뜁니다.
+
+API의 선택적 `reason`은 같은 transaction에서 progress log와 Undo effect에 반영되며, 기존 빈 본문 요청의 receipt fingerprint를 보존합니다. 삭제 응답은 `deleted`와 새 revision의 Issue를 함께 반환합니다. 실제 SQLite 서버에서 삭제·복원·사유 log·noop·부분 성공 재실행을 검증했고, 서버 receipt 재생 및 reason fingerprint 충돌도 테스트했습니다.

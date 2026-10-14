@@ -128,8 +128,9 @@ func (Codec) Encode(kind string, outcome any) (port.StoredReply, error) {
 		}
 		if kind == "issue.delete" {
 			outcome = struct {
-				Deleted bool `json:"deleted"`
-			}{true}
+				Deleted bool     `json:"deleted"`
+				Issue   IssueDTO `json:"issue"`
+			}{true, IssueDTOFrom(result.Issue)}
 		}
 
 	case "relation.add":

@@ -55,6 +55,8 @@ Domain과 application은 HTTP·SQLite 구현을 import하지 않습니다. 모�
 
 Issue 생성의 `blocks`에는 대상 Issue ID와 관측 revision을 전달합니다. 새 Issue와 대상들의 의존성 변경은 한 transaction으로 처리하며, 충돌이나 순환이 있으면 전체를 취소합니다. CLI `create --blocks`는 서버의 `create_blocks` capability를 확인하고 이 계약을 사용합니다.
 
+삭제·복원 API는 선택적인 `reason` 본문을 받습니다. 사유가 있으면 변경과 progress log, Undo effect, receipt를 같은 SQLite transaction으로 저장합니다. 삭제 응답에는 `deleted` 확인값과 새 Issue revision이 포함됩니다.
+
 ## ID 규칙
 
 | 값 | 형식 | 생성 주체 |

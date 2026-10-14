@@ -198,11 +198,40 @@ def main():
                 deleted = json.loads(result.stdout)
                 assert len(deleted) == 1 and deleted[0]['id'] == tombstone['id']
                 assert deleted[0]['deleted_at']
+                def cli_deletion(action, issue_id, reason):
+                    result = subprocess.run([args.cli, '--work-dir', str(repo),
+                        action, issue_id, '--reason=' + reason, '--json'], env=env,
+                        capture_output=True, text=True, timeout=30)
+                    if result.returncode:
+                        raise RuntimeError(f"{action} exit {result.returncode}: stdout={result.stdout!r}, stderr={result.stderr!r}")
+                    return json.loads(result.stdout)
+                restored = cli_deletion('restore', tombstone['id'], 'smoke restore')
+                assert restored[0]['id'] == tombstone['id'] and not restored[0]['issue'].get('deleted_at')
+                assert cli_deletion('restore', tombstone['id'], 'smoke restore')[0]['noop']
+                assert any(log['message'] == 'Restored: smoke restore' for log in show(tombstone['id'])['logs'])
+                removed = cli_deletion('delete', tombstone['id'], 'smoke delete')
+                assert removed[0]['issue']['deleted_at']
+                assert cli_deletion('delete', tombstone['id'], 'smoke delete')[0]['noop']
+                another = post(base + '/issues', {'title': 'Partial deletion fixture',
+                    'type': 'task'})['issue']
+                partial_args = [args.cli, '--work-dir', str(repo), 'delete',
+                    another['id'], 'td-ffffffffffffffff', '--reason=partial smoke', '--json']
+                for attempt in range(2):
+                    partial = subprocess.run(partial_args, env=env, capture_output=True,
+                        text=True, timeout=30)
+                    assert partial.returncode != 0 and 'completed for ' + another['id'] in partial.stdout
+                listed = subprocess.run([args.cli, '--work-dir', str(repo),
+                    'deleted', '--json'], env=env, capture_output=True, text=True, timeout=30)
+                assert listed.returncode == 0
+                assert {row['id'] for row in json.loads(listed.stdout)} == {tombstone['id'], another['id']}
+                cli_deletion('restore', another['id'], 'resume smoke')
+                assert sum(log['message'] == 'Deleted: partial smoke'
+                    for log in show(another['id'])['logs']) == 1
                 for directory in (repo, attached):
                     assert not (directory / '.todos/issues.db').exists(), 'local SQLite fallback'
                     config = (directory / '.todos/config.json').read_text()
                     assert token not in config, 'token persisted in config'
-                print('PASS: real backend init/reuse/worktree/attach, show/prefix/children/tree/multiple, TDQ fields/hierarchy/comments, ranked log search, list filters/TDQ, info statistics, CLI create/dependency/blocks, deleted listing, no local DB/token')
+                print('PASS: real backend init/reuse/worktree/attach, show/prefix/children/tree/multiple, TDQ fields/hierarchy/comments, ranked log search, list filters/TDQ, info statistics, CLI create/dependency/blocks, deleted listing/write/reason, no local DB/token')
             finally:
                 server.terminate()
                 try:

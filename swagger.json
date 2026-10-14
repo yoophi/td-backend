@@ -1277,10 +1277,14 @@
                       "properties": {
                         "deleted": {
                           "type": "boolean"
+                        },
+                        "issue": {
+                          "$ref": "#/components/schemas/IssueDTO"
                         }
                       },
                       "required": [
-                        "deleted"
+                        "deleted",
+                        "issue"
                       ]
                     }
                   },
@@ -1356,7 +1360,17 @@
           {
             "$ref": "#/components/parameters/Revision"
           }
-        ]
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IssueDeleteRestoreReason"
+              }
+            }
+          }
+        }
       }
     },
     "/v1/projects/{project_id}/issues/{issue_id}/restore": {
@@ -1465,7 +1479,17 @@
           {
             "$ref": "#/components/parameters/Revision"
           }
-        ]
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IssueDeleteRestoreReason"
+              }
+            }
+          }
+        }
       }
     },
     "/v1/projects/{project_id}/issues/{issue_id}/start": {
@@ -8229,6 +8253,24 @@
           "name"
         ]
       },
+      "BlockObservation": {
+        "type": "object",
+        "properties": {
+          "issue_id": {
+            "type": "string",
+            "pattern": "^td-[0-9a-f]{16}$"
+          },
+          "revision": {
+            "type": "string",
+            "pattern": "^r-[1-9][0-9]*$"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "issue_id",
+          "revision"
+        ]
+      },
       "IssueCreate": {
         "type": "object",
         "properties": {
@@ -8296,10 +8338,21 @@
           }
         },
         "additionalProperties": false,
-        "description": "Server assigns ID, timestamps, creator session and open status. Default type task, priority P2, points 0. Dependencies are created atomically.",
+        "description": "Server assigns ID, timestamps, creator session and open status. Default type task, priority P2, points 0. Outgoing and observed incoming dependencies are created atomically.",
         "required": [
           "title"
         ]
+      },
+      "IssueDeleteRestoreReason": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "description": "When supplied, creates a progress log in the same transaction as deletion or restoration."
+          }
+        },
+        "additionalProperties": false
       },
       "IssuePatch": {
         "type": "object",
@@ -8954,24 +9007,6 @@
         "required": [
           "change_token"
         ]
-      },
-      "BlockObservation": {
-        "type": "object",
-        "properties": {
-          "issue_id": {
-            "type": "string",
-            "pattern": "^td-[0-9a-f]{16}$"
-          },
-          "revision": {
-            "type": "string",
-            "pattern": "^r-[1-9][0-9]*$"
-          }
-        },
-        "required": [
-          "issue_id",
-          "revision"
-        ],
-        "additionalProperties": false
       }
     },
     "parameters": {

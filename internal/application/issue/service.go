@@ -256,10 +256,19 @@ func (s *Service) Patch(ctx context.Context, c domain.Caller, m port.Mutation, i
 	})
 }
 func (s *Service) Delete(ctx context.Context, c domain.Caller, m port.Mutation, id, observed string) (port.StoredReply, error) {
-	return s.mutate(ctx, c, m, id, observed, "issue.delete", false, func(command operation.CommandContext, i *domain.Issue) error { i.DeletedAt = &command.Now; return nil })
+	return s.DeleteWithReason(ctx, c, m, id, observed, "")
 }
 func (s *Service) Restore(ctx context.Context, c domain.Caller, m port.Mutation, id, observed string) (port.StoredReply, error) {
-	return s.mutate(ctx, c, m, id, observed, "issue.restore", true, func(command operation.CommandContext, i *domain.Issue) error {
+	return s.RestoreWithReason(ctx, c, m, id, observed, "")
+}
+func (s *Service) DeleteWithReason(ctx context.Context, c domain.Caller, m port.Mutation, id, observed, reason string) (port.StoredReply, error) {
+	return s.mutateReason(ctx, c, m, id, observed, "issue.delete", false, reason, "Deleted: ", func(command operation.CommandContext, i *domain.Issue) error {
+		i.DeletedAt = &command.Now
+		return nil
+	})
+}
+func (s *Service) RestoreWithReason(ctx context.Context, c domain.Caller, m port.Mutation, id, observed, reason string) (port.StoredReply, error) {
+	return s.mutateReason(ctx, c, m, id, observed, "issue.restore", true, reason, "Restored: ", func(command operation.CommandContext, i *domain.Issue) error {
 		if i.DeletedAt == nil {
 			return domain.ErrConflict
 		}
@@ -268,7 +277,13 @@ func (s *Service) Restore(ctx context.Context, c domain.Caller, m port.Mutation,
 	})
 }
 func (s *Service) mutate(ctx context.Context, c domain.Caller, m port.Mutation, id, observed, kind string, deleted bool, edit func(operation.CommandContext, *domain.Issue) error) (port.StoredReply, error) {
+	return s.mutateReason(ctx, c, m, id, observed, kind, deleted, "", "", edit)
+}
+func (s *Service) mutateReason(ctx context.Context, c domain.Caller, m port.Mutation, id, observed, kind string, deleted bool, reason, prefix string, edit func(operation.CommandContext, *domain.Issue) error) (port.StoredReply, error) {
 	return s.Runner.Run(ctx, c, m, kind, func(command operation.CommandContext) (any, error) {
+		if reason != "" && strings.TrimSpace(reason) == "" {
+			return nil, invalid("reason", "nonblank reason required")
+		}
 		expected, e := domain.Observe(observed)
 		if e != nil {
 			return nil, e
@@ -295,7 +310,19 @@ func (s *Service) mutate(ctx context.Context, c domain.Caller, m port.Mutation, 
 		if e = tx.IssueWrites().Save(ctx, c.ProjectID, *i, expected); e != nil {
 			return nil, e
 		}
-		if e = SaveEffect(command, c.ProjectID, &before, State{Issue: *i, Dependencies: deps}); e != nil {
+		after := State{Issue: *i, Dependencies: deps}
+		if reason != "" {
+			activityID, e := s.ID("activity")
+			if e != nil {
+				return nil, e
+			}
+			activity := port.Activity{ID: activityID, IssueID: id, SessionID: c.SessionID, OperationRowID: command.RowID, OperationID: m.Key, Kind: "log", Message: prefix + reason, LogType: domain.LogTypeProgress, ContentVersion: i.ContentVersion, Author: c.Actor.Name, SnapshotEvent: "log", CreatedAt: command.Now, UpdatedAt: command.Now}
+			if e = tx.WorkflowWrites().AppendActivity(ctx, c.ProjectID, activity); e != nil {
+				return nil, e
+			}
+			after.ActivityChanges = []port.Activity{activity}
+		}
+		if e = SaveEffect(command, c.ProjectID, &before, after); e != nil {
 			return nil, e
 		}
 		return Result{Issue: *i}, nil
