@@ -46,6 +46,7 @@ func monitorIssue(c monitor.Card) IssueDTO {
 	i := IssueDTOFrom(c.Issue)
 	actions := append([]string{}, c.Transitions...)
 	i.AvailableTransitions = &actions
+	i.ReviewOptions = &c.ReviewOptions
 	if c.HasApproval && c.Review != nil {
 		r := c.Review.Record
 		i.ActiveReview = &r

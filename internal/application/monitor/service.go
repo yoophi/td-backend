@@ -28,11 +28,16 @@ type Options struct {
 type Card struct {
 	Issue            domain.Issue
 	Transitions      []string
+	ReviewOptions    ReviewOptions
 	Category         string
 	Review           *port.Review
 	HasApproval      bool
 	Dependencies     []string
 	OpenDependencies int
+}
+type ReviewOptions struct {
+	SelfReviewPrompt      bool `json:"self_review_prompt"`
+	RecordReviewAvailable bool `json:"record_review_available"`
 }
 type Result struct {
 	Titles                 map[string]string
@@ -160,7 +165,14 @@ func (s *Service) Get(ctx context.Context, c domain.Caller, opts Options) (Resul
 					open++
 				}
 			}
-			card := Card{Issue: i, Review: f.ActiveReview, HasApproval: f.HasActiveApproval(), Dependencies: deps, OpenDependencies: open, Category: category(f, facts.Rework[id], open > 0), Transitions: transitions(f, role != domain.RoleReader)}
+			actions := transitions(f, role != domain.RoleReader)
+			options := ReviewOptions{}
+			if slices.Contains(actions, "approve") && !f.HasActiveApproval() {
+				ordinary, self := f.Reviewer(false, ""), f.Reviewer(true, "")
+				options.SelfReviewPrompt = !ordinary.Allowed && self.Allowed && self.SelfReview
+				options.RecordReviewAvailable = (mode == reviewpolicy.ModeTrusted || mode == reviewpolicy.ModeDelegated) && !i.Minor
+			}
+			card := Card{Issue: i, Review: f.ActiveReview, HasApproval: f.HasActiveApproval(), Dependencies: deps, OpenDependencies: open, Category: category(f, facts.Rework[id], open > 0), Transitions: actions, ReviewOptions: options}
 			cards[id] = card
 			out.Titles[id] = i.Title
 		}

@@ -6078,6 +6078,9 @@
             ],
             "nullable": true,
             "type": "object"
+          },
+          "review_options": {
+            "$ref": "#/components/schemas/MonitorReviewOptions"
           }
         },
         "required": [
@@ -7193,6 +7196,23 @@
           8,
           13,
           21
+        ]
+      },
+      "MonitorReviewOptions": {
+        "type": "object",
+        "properties": {
+          "self_review_prompt": {
+            "type": "boolean",
+            "description": "The caller has implementation involvement and must acknowledge self-review when no named reviewer is provided."
+          },
+          "record_review_available": {
+            "type": "boolean",
+            "description": "The caller may open the separate review-record form for this current monitor observation."
+          }
+        },
+        "required": [
+          "self_review_prompt",
+          "record_review_available"
         ]
       },
       "Project": {

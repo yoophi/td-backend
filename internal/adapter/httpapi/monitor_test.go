@@ -45,6 +45,44 @@ func bucket(t *testing.T, m receiptcodec.MonitorResultDTO, name string) []receip
 func hasTransition(i receiptcodec.IssueDTO, action string) bool {
 	return i.AvailableTransitions != nil && slices.Contains(*i.AvailableTransitions, action)
 }
+func TestMonitorReviewOptionsIncludePastImplementation(t *testing.T) {
+	h, p, first := issueSetup(t)
+	status, data := h.request("POST", "/v1/projects/"+p+"/sessions", testToken, key(t), "", `{"context_id":"later-implementer"}`)
+	if status != 201 {
+		t.Fatal(status, string(data))
+	}
+	later := sessionFrom(t, data).ID
+	status, data = h.request("POST", "/v1/projects/"+p+"/sessions", testToken, key(t), "", `{"context_id":"independent-reviewer"}`)
+	if status != 201 {
+		t.Fatal(status, string(data))
+	}
+	reviewer := sessionFrom(t, data).ID
+	base := "/v1/projects/" + p + "/issues"
+	status, _, data = issueRequest(t, h, "POST", base, first, key(t), "", `{"title":"Historical implementation review"}`)
+	if status != 201 {
+		t.Fatal(status, string(data))
+	}
+	path := base + "/" + issueFrom(t, data).ID
+	for _, step := range []struct{ action, session, revision, body string }{
+		{"start", first, "r-1", `{}`},
+		{"unstart", first, "r-2", `{}`},
+		{"start", later, "r-3", `{}`},
+		{"handoffs", later, "r-4", `{"done":["implemented"]}`},
+	} {
+		status, _, data = issueRequest(t, h, "POST", path+"/"+step.action, step.session, key(t), `"`+step.revision+`"`, step.body)
+		if status != 200 && status != 201 {
+			t.Fatal(step.action, status, string(data))
+		}
+	}
+	past := bucket(t, getMonitor(t, h, p, first, ""), "reviewable")
+	independent := bucket(t, getMonitor(t, h, p, reviewer, ""), "reviewable")
+	if len(past) != 1 || past[0].ImplementerSession == nil || *past[0].ImplementerSession != later || past[0].ReviewOptions == nil || !past[0].ReviewOptions.SelfReviewPrompt || !past[0].ReviewOptions.RecordReviewAvailable {
+		t.Fatalf("past implementation was not reflected: %+v", past)
+	}
+	if len(independent) != 1 || independent[0].ReviewOptions == nil || independent[0].ReviewOptions.SelfReviewPrompt || !independent[0].ReviewOptions.RecordReviewAvailable {
+		t.Fatalf("independent reviewer got historical prompt: %+v", independent)
+	}
+}
 func TestMonitorPoliciesApprovalFreshnessAndTransitions(t *testing.T) {
 	for _, mode := range []string{"trusted", "delegated", "strict", "balanced"} {
 		t.Run(mode, func(t *testing.T) {
@@ -65,9 +103,15 @@ func TestMonitorPoliciesApprovalFreshnessAndTransitions(t *testing.T) {
 			if hasTransition(mine[0], "approve") != (mode == "trusted") {
 				t.Fatal(mode, mine[0])
 			}
+			if mine[0].ReviewOptions == nil || mine[0].ReviewOptions.SelfReviewPrompt != (mode == "trusted") || mine[0].ReviewOptions.RecordReviewAvailable != (mode == "trusted") {
+				t.Fatalf("implementation history review options differ from policy: %s %+v", mode, mine[0].ReviewOptions)
+			}
 			theirs := bucket(t, getMonitor(t, h, p, reviewer, ""), "reviewable")
 			if len(theirs) != 1 || !hasTransition(theirs[0], "approve") {
 				t.Fatal(theirs)
+			}
+			if theirs[0].ReviewOptions == nil || theirs[0].ReviewOptions.SelfReviewPrompt || theirs[0].ReviewOptions.RecordReviewAvailable != (mode == "trusted" || mode == "delegated") {
+				t.Fatalf("independent reviewer options differ from policy: %s %+v", mode, theirs[0].ReviewOptions)
 			}
 			if mode == "trusted" || mode == "delegated" {
 				status, _, data = issueRequest(t, h, "POST", path+"/approve", reviewer, key(t), `"r-3"`, `{"record_only":true,"reason":"Verified monitor parity"}`)

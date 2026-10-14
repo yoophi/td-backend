@@ -40,6 +40,8 @@ S['Points'] = integer(enum=[0, 1, 2, 3, 5, 8, 13, 21])
 S['IssueDTO']['properties'].update(status=ref('Status'), type=ref('IssueType'), priority=ref('Priority'), points=ref('Points'))
 S['IssueDTO']['description'] = 'Complete store record; revision is opaque. Arrays are never null. Optional reviews require with=reviews. List responses retain description and acceptance for Reader compatibility.'
 S['IssueDTO']['properties']['revision'] = string(minLength=1, description='Opaque revision. Strong ETag is this value enclosed in double quotes.')
+S['MonitorReviewOptions'] = obj({'self_review_prompt': boolean(description='The caller has implementation involvement and must acknowledge self-review when no named reviewer is provided.'), 'record_review_available': boolean(description='The caller may open the separate review-record form for this current monitor observation.')}, ['self_review_prompt', 'record_review_available'])
+S['IssueDTO']['properties']['review_options'] = ref('MonitorReviewOptions')
 S['BoardDTO']['properties']['revision'] = string(minLength=1)
 S['BoardDTO']['required'].append('revision')
 S['BoardDTO']['properties']['view_mode'] = string(enum=['swimlanes', 'backlog'])
