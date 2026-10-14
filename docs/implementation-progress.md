@@ -392,3 +392,7 @@ CLI `comment`와 `comments add`를 revision/key가 있는 원격 활동 추가 A
 ## gh-16 진행 — log 원격 활동
 
 CLI `log`를 backend 활동 API에 연결했습니다. 명시한 Issue 또는 현재 focus를 사용하고, type 단축 플래그·stdin 본문과 호출 Session의 활성 Work Session을 기록합니다. focus, stdin과 Work Session ID는 새 요청 준비 중에만 읽으며, 응답 유실 뒤 재실행에는 저장한 요청과 key를 그대로 사용합니다. 실제 서버에서 decision log와 Work Session 귀속을 검증했고, stdin이 바뀐 뒤 원문 복구 회귀를 CLI race로 검증했습니다.
+
+## gh-16 진행 — handoff 수동 활동
+
+CLI `handoff`를 backend의 수동 `activity` 기록에 연결했습니다. done/remaining/decision/uncertain의 직접값·파일·stdin, positional message, Git snapshot과 활성 Work Session ID를 새 요청 준비 시점에 수집해 저장합니다. 비어 있는 항목은 `null` 대신 빈 배열로 전송합니다. 기록 자체는 review 상태를 바꾸지 않으며, 이후 별도 `update --status=in_review`가 최신 handoff를 정책 입력으로 사용합니다. 실제 서버 smoke에서 구조화 항목·snapshot·Work Session 귀속·show 조회·review 전이를 확인했습니다.

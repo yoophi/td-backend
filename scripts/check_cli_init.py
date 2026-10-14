@@ -352,11 +352,26 @@ def main():
                 assert logged['log']['work_session_id'] == own_work_session
                 assert any(log['message'] == 'Remote CLI decision log'
                     for log in show(work['id'])['logs'])
+                handoff = cli_comment('handoff', work['id'],
+                    '--done=CLI implementation complete',
+                    '--remaining=Review final behavior',
+                    '--decision=Use remote activity')
+                assert handoff['activity']['kind'] == 'handoff'
+                assert handoff['activity']['done'] == ['CLI implementation complete']
+                assert handoff['activity']['work_session_id'] == own_work_session
+                assert handoff['activity']['snapshot']['branch']
+                assert show(work['id'])['handoff']['done'] == ['CLI implementation complete']
+                review_after_handoff = subprocess.run([args.cli,
+                    '--work-dir', str(repo), 'update', work['id'],
+                    '--status=in_review', '--json'], env=env, capture_output=True,
+                    text=True, timeout=30)
+                assert review_after_handoff.returncode == 0
+                assert json.loads(review_after_handoff.stdout)['issue']['status'] == 'in_review'
                 for directory in (repo, attached):
                     assert not (directory / '.todos/issues.db').exists(), 'local SQLite fallback'
                     config = (directory / '.todos/config.json').read_text()
                     assert token not in config, 'token persisted in config'
-                print('PASS: real backend init/reuse/worktree/attach, show/prefix/children/tree/multiple, TDQ fields/hierarchy/comments, ranked log search, list filters/TDQ, info statistics, CLI create/dependency/blocks, deleted listing/write/reason, workflow status/field update/start/unstart/block/unblock/reopen, comments/log, no local DB/token')
+                print('PASS: real backend init/reuse/worktree/attach, show/prefix/children/tree/multiple, TDQ fields/hierarchy/comments, ranked log search, list filters/TDQ, info statistics, CLI create/dependency/blocks, deleted listing/write/reason, workflow status/field update/start/unstart/block/unblock/reopen, comments/log/handoff, no local DB/token')
             finally:
                 server.terminate()
                 try:
