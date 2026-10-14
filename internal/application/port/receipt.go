@@ -24,6 +24,7 @@ type Receipt struct {
 	RepresentationVersion                                                int
 	Reply                                                                StoredReply
 	CreatedAt                                                            time.Time
+	HasEffects, Undone                                                   bool
 }
 type AuditFilter struct {
 	SessionID, IssueID string

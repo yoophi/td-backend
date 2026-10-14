@@ -21,13 +21,13 @@ func (r operationRepo) Get(ctx context.Context, actor, scope, key string) (port.
 	return scanReceipt(r.tx.QueryRowContext(ctx, "SELECT "+receiptColumns+" FROM operations WHERE actor_id=? AND scope_key=? AND operation_id=?", actor, scope, key))
 }
 
-const receiptColumns = "row_id,coalesce(project_id,''),actor_id,coalesce(session_id,''),scope_key,operation_id,fingerprint,command_kind,request_method,request_path,representation_version,response_status,response_headers,response_body,created_at"
+const receiptColumns = "row_id,coalesce(project_id,''),actor_id,coalesce(session_id,''),scope_key,operation_id,fingerprint,command_kind,request_method,request_path,representation_version,response_status,response_headers,response_body,created_at,EXISTS(SELECT 1 FROM operation_effects e WHERE e.project_id=operations.project_id AND e.operation_row_id=operations.row_id),EXISTS(SELECT 1 FROM operation_undos u WHERE u.project_id=operations.project_id AND u.original_row_id=operations.row_id)"
 
 func scanReceipt(row interface{ Scan(...any) error }) (port.Receipt, error) {
 	var o port.Receipt
 	var stamp string
 	var headers []byte
-	e := row.Scan(&o.RowID, &o.ProjectID, &o.ActorID, &o.SessionID, &o.Scope, &o.Key, &o.Fingerprint, &o.Kind, &o.Method, &o.Path, &o.RepresentationVersion, &o.Reply.Status, &headers, &o.Reply.Body, &stamp)
+	e := row.Scan(&o.RowID, &o.ProjectID, &o.ActorID, &o.SessionID, &o.Scope, &o.Key, &o.Fingerprint, &o.Kind, &o.Method, &o.Path, &o.RepresentationVersion, &o.Reply.Status, &headers, &o.Reply.Body, &stamp, &o.HasEffects, &o.Undone)
 	if errors.Is(e, sql.ErrNoRows) {
 		return o, domain.ErrNotFound
 	}

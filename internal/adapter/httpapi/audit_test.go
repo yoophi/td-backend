@@ -35,7 +35,7 @@ func TestOperationAuditReceiptFiltersEffectsAndIsolation(t *testing.T) {
 		t.Fatal(e)
 	}
 	got := get.Data.Operation
-	if got.ID != op || got.SessionID != session || got.Method != "POST" || got.Path != root+"/issues" || got.Status != "committed" || got.ResponseStatus != 201 || issueFrom(t, got.Response).ID != id || strings.Contains(string(data), "fingerprint") || strings.Contains(string(data), "actor_id") {
+	if got.ID != op || got.SessionID != session || got.Kind != "issue.create" || !got.HasEffects || got.Undone || got.Method != "POST" || got.Path != root+"/issues" || got.Status != "committed" || got.ResponseStatus != 201 || issueFrom(t, got.Response).ID != id || strings.Contains(string(data), "fingerprint") || strings.Contains(string(data), "actor_id") {
 		t.Fatal(string(data))
 	}
 	list := func(q string) []receiptcodec.OperationDTO {

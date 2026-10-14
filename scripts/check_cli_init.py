@@ -479,11 +479,30 @@ def main():
                 assert batch.returncode == 0, batch.stdout + batch.stderr
                 assert sorted(json.loads(line)['id'] for line in batch.stdout.splitlines()) == sorted(candidates)
                 assert all(show(candidate)['status'] == 'closed' for candidate in candidates)
+                def cli_history(*arguments):
+                    result = subprocess.run([args.cli, '--work-dir', str(repo),
+                        *arguments, '--json'], env=env, capture_output=True,
+                        text=True, timeout=30)
+                    if result.returncode:
+                        raise RuntimeError(f"{' '.join(arguments)} exit {result.returncode}: "
+                                           f"stdout={result.stdout!r}, stderr={result.stderr!r}")
+                    return json.loads(result.stdout)
+                undo_fixture = cli_history('create', 'Backend undo fixture')['issue']
+                operation = cli_history('last', '--n=1')[0]
+                assert operation['kind'] == 'issue.create' and operation['has_effects']
+                assert not operation['undone']
+                assert cli_history('undo', '--list')[0]['id'] == operation['id']
+                undone = cli_history('undo')
+                assert undone['action'] == 'undone'
+                assert undone['operation_id'] == operation['id']
+                assert any(item['id'] == undo_fixture['id'] for item in undone['affected_issues'])
+                assert any(item['id'] == undo_fixture['id'] for item in cli_history('deleted'))
+                assert cli_history('undo', '--list')[0]['undone']
                 for directory in (repo, attached):
                     assert not (directory / '.todos/issues.db').exists(), 'local SQLite fallback'
                     config = (directory / '.todos/config.json').read_text()
                     assert token not in config, 'token persisted in config'
-                print('PASS: real backend init/reuse/worktree/attach, show/prefix/children/tree/multiple, TDQ fields/hierarchy/comments, ranked log search, list filters/TDQ, info statistics, CLI create/dependency/blocks and dep add/rm/query, files read/link/unlink, deleted listing/write/reason, workflow status/field update/start/unstart/block/unblock/reopen, comments/log/handoff/review/reject/approve auto/all/close, no local DB/token')
+                print('PASS: real backend init/reuse/worktree/attach, show/prefix/children/tree/multiple, TDQ fields/hierarchy/comments, ranked log search, list filters/TDQ, info statistics, CLI create/dependency/blocks and dep add/rm/query, files read/link/unlink, deleted listing/write/reason, workflow status/field update/start/unstart/block/unblock/reopen, comments/log/handoff/review/reject/approve auto/all/close, last/undo, no local DB/token')
             finally:
                 server.terminate()
                 try:

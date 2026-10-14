@@ -7501,6 +7501,9 @@
           "session_id": {
             "type": "string"
           },
+          "kind": {
+            "type": "string"
+          },
           "method": {
             "type": "string"
           },
@@ -7512,6 +7515,12 @@
             "enum": [
               "committed"
             ]
+          },
+          "has_effects": {
+            "type": "boolean"
+          },
+          "undone": {
+            "type": "boolean"
           },
           "response_status": {
             "type": "integer"
@@ -7526,13 +7535,16 @@
             "format": "date-time"
           }
         },
-        "description": "Durable receipt atomically committed with mutation. A GET 404 means no committed receipt was visible at that instant; an in-flight request may still commit.",
+        "description": "Durable receipt atomically committed with mutation. has_effects means a conditional inverse may be available; undone marks a committed inverse. A GET 404 means no committed receipt was visible at that instant; an in-flight request may still commit.",
         "required": [
           "id",
           "session_id",
+          "kind",
           "method",
           "path",
           "status",
+          "has_effects",
+          "undone",
           "response_status",
           "response",
           "created_at"

@@ -3,9 +3,11 @@ package httpapi
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"testing"
 
+	"github.com/yoophi/td-backend/internal/adapter/httpapi/receiptcodec"
 	"github.com/yoophi/td-backend/internal/application/port"
 )
 
@@ -32,6 +34,15 @@ func TestUndoNoteBoardFocusAndWorkSession(t *testing.T) {
 	status, first := doUndo(t, h, p, session, updateKey, undoKey)
 	if status != 200 {
 		t.Fatal(status, string(first))
+	}
+	status, _, data = issueRequest(t, h, "GET", root+"/operations/"+updateKey, session, "", "", "")
+	var audited struct {
+		Data struct {
+			Operation receiptcodec.OperationDTO `json:"operation"`
+		} `json:"data"`
+	}
+	if e := json.Unmarshal(data, &audited); status != 200 || e != nil || !audited.Data.Operation.HasEffects || !audited.Data.Operation.Undone || audited.Data.Operation.Kind != "note.update" {
+		t.Fatal("undo audit state", status, e, string(data))
 	}
 	status, _, data = issueRequest(t, h, "GET", root+"/notes/"+n.ID, session, "", "", "")
 	got := noteFrom(t, data)

@@ -35,17 +35,17 @@ func (r operationRepo) List(ctx context.Context, project string, f port.AuditFil
 	if e := r.check(); e != nil {
 		return nil, e
 	}
-	q := "SELECT " + receiptColumns + " FROM operations o WHERE project_id=?"
+	q := "SELECT " + receiptColumns + " FROM operations WHERE project_id=?"
 	args := []any{project}
 	if f.SessionID != "" {
 		q += " AND session_id=?"
 		args = append(args, f.SessionID)
 	}
 	if f.IssueID != "" {
-		q += " AND EXISTS (SELECT 1 FROM operation_effects e WHERE e.project_id=o.project_id AND e.operation_row_id=o.row_id AND e.entity_kind='issue' AND e.entity_id=?)"
+		q += " AND EXISTS (SELECT 1 FROM operation_effects e WHERE e.project_id=operations.project_id AND e.operation_row_id=operations.row_id AND e.entity_kind='issue' AND e.entity_id=?)"
 		args = append(args, f.IssueID)
 	}
-	q += " ORDER BY created_at DESC,row_id LIMIT ? OFFSET ?"
+	q += " ORDER BY created_at DESC,row_id DESC LIMIT ? OFFSET ?"
 	args = append(args, f.Limit, f.Offset)
 	rows, e := r.tx.QueryContext(ctx, q, args...)
 	if e != nil {
