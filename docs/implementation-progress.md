@@ -302,3 +302,11 @@ CLI integration branch `1ae3800`에서 show/context/view/get의 backend 분기�
 상세 JSON·prefix·focus·children/tree·복수 Issue·short 출력, 잘못된 format의 무요청 거절과 복수 조회 중 실패 시 무출력 회귀가 race/vet를 통과했습니다. 실제 서버/SQLite에 epic/child를 생성한 뒤 CLI show/prefix/children/tree/multiple JSON을 검증하도록 `scripts/check_cli_init.py`를 확장했고 통과했습니다. 임시 Caller context도 격리합니다. list/query/search/stats와 workflow/monitor/serve는 계속 진행합니다.
 
 기존 전체 make test는 모든 non-cmd 패키지가 통과했지만 cmd에서 새 --project-id에 따른 inventory mismatch와 누적 실행 60분 timeout으로 종료했습니다. timeout 당시 활성 테스트는 TestGitHubTransitionRoutingAndFocus(12초)였으며 단일 테스트가 60분 멈춘 증거는 아닙니다. inventory를 갱신한 뒤 전체 gate를 다시 확인할 예정이며 아직 gh-14를 완료하지 않았습니다.
+
+## gh-15 진행 — 원격 TDQ query
+
+CLI query의 backend 분기를 기존 TDQ 평가기에 연결했습니다. 전체 Issue 페이지를 읽고 필요한 detail(log/comment/handoff/file/dependency)은 request-local snapshot에서 lazy 조회하며, rework/open-dependency 집합은 서버 TDQ로 확인합니다. Project changes token을 계산 전후 비교하여 중간 변경 시 전체 계산과 lazy cache를 폐기하고 최대 3회 재시작합니다. 변경 중 delete로 생긴 일시적 404도 새 token이면 재시도하며, 안정된 상태의 오류는 그대로 실패합니다. 결과는 최종 안정 확인 후에만 출력합니다.
+
+기존 predicate/현재 Session/cross-entity와 sort/limit/max-scan 및 table/JSON/ids/count를 유지합니다. malformed query는 네트워크 전에 거절합니다. regular/comment/rework/Session predicate, scan cap 경고, token 변경·일시 오류 전체 재시작, 안정 오류 보존과 bounded retry 회귀가 race와 vet를 통과했습니다. 실제 서버/SQLite smoke에서 type, descendant_of 및 comment.text 조회도 통과했습니다. 댓글 생성 smoke는 API 계약대로 observed revision의 If-Match를 전달합니다.
+
+CLI inventory는 init --project-id 한 항목만 각 sync snapshot에 추가하여 f74ae2c 커밋·push했고 isolated inventory/GitHub transition 검증을 통과했습니다. 전체 release-safe make test는 TEST_TIMEOUT=120m으로 재실행 중입니다. list/search/stats 및 workflow/monitor/serve 연결은 계속 진행합니다.

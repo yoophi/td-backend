@@ -82,13 +82,15 @@ def main():
                             '--project-id=' + project)['backend']['project_id'] == project
                 init(repo, '--project-id=prj_0199dc38-1200-7000-8000-000000000001', success=False)
                 init(repo, '--project-id=invalid', success=False)
-                def post(path, body):
+                def post(path, body, revision=None):
                     request = urllib.request.Request(endpoint + path,
                         data=json.dumps(body).encode(), method='POST', headers={
                             'Authorization': 'Bearer ' + token,
                             'Content-Type': 'application/json',
                             'Idempotency-Key': str(uuid.uuid4()),
                         })
+                    if revision is not None:
+                        request.add_header('If-Match', '"' + revision + '"')
                     if caller:
                         request.add_header('X-TD-Session', caller)
                     with urllib.request.urlopen(request, timeout=15) as response:
@@ -99,8 +101,9 @@ def main():
                     'context_id': 'real-cli-show-fixture', 'agent_type': 'test'})['session']['id']
                 parent = post(base + '/issues', {'title': 'Real backend parent feature',
                     'type': 'epic', 'priority': 'P1'})['issue']['id']
-                child = post(base + '/issues', {'title': 'Real backend child task',
-                    'type': 'task', 'priority': 'P2', 'parent_id': parent})['issue']['id']
+                child_record = post(base + '/issues', {'title': 'Real backend child task',
+                    'type': 'task', 'priority': 'P2', 'parent_id': parent})['issue']
+                child = child_record['id']
                 def show(*flags):
                     result = subprocess.run([args.cli, '--work-dir', str(repo),
                         'show', '--json', *flags], env=env, capture_output=True,
@@ -114,11 +117,22 @@ def main():
                 assert show(parent, '--children')['children'][0]['id'] == child
                 assert show(parent, '--tree')['children'][0]['id'] == child
                 assert len(show(parent, child)) == 2
+                post(base + '/issues/' + child + '/comments', {'text': 'ready for remote query'}, child_record['revision'])
+                def query(expression):
+                    result = subprocess.run([args.cli, '--work-dir', str(repo),
+                        'query', expression, '--json'], env=env, capture_output=True,
+                        text=True, timeout=30)
+                    if result.returncode:
+                        raise RuntimeError(result.stderr)
+                    return json.loads(result.stdout)
+                assert [row['id'] for row in query('type = epic')] == [parent]
+                assert [row['id'] for row in query('descendant_of("' + parent + '")')] == [child]
+                assert [row['id'] for row in query('comment.text ~ "ready"')] == [child]
                 for directory in (repo, attached):
                     assert not (directory / '.todos/issues.db').exists(), 'local SQLite fallback'
                     config = (directory / '.todos/config.json').read_text()
                     assert token not in config, 'token persisted in config'
-                print('PASS: real backend init/reuse/worktree/attach, show/prefix/children/tree/multiple, no local DB/token')
+                print('PASS: real backend init/reuse/worktree/attach, show/prefix/children/tree/multiple, TDQ fields/hierarchy/comments, no local DB/token')
             finally:
                 server.terminate()
                 try:
