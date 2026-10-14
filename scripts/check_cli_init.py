@@ -129,6 +129,27 @@ def main():
                 assert board_show.returncode == 0, board_show.stderr
                 board_cards = json.loads(board_show.stdout)
                 assert {card['issue']['id'] for card in board_cards} == {parent, child}
+                def cli_board(*arguments):
+                    result = subprocess.run([args.cli, '--work-dir', str(repo),
+                        'board', *arguments, '--json'], env=env, capture_output=True,
+                        text=True, timeout=30)
+                    if result.returncode:
+                        raise RuntimeError(f"board {' '.join(arguments)} exit {result.returncode}: "
+                                           f"stdout={result.stdout!r}, stderr={result.stderr!r}")
+                    return json.loads(result.stdout)
+                custom_board = cli_board('create', 'Smoke board')['board']
+                assert custom_board['name'] == 'Smoke board'
+                assert cli_board('move', custom_board['id'], parent, '1')['positioned']
+                custom_cards = cli_board('show', custom_board['id'])
+                assert custom_cards[0]['issue']['id'] == parent and custom_cards[0]['has_position']
+                assert cli_board('unposition', custom_board['id'], parent)['removed']
+                assert not next(card for card in cli_board('show', custom_board['id'])
+                                if card['issue']['id'] == parent)['has_position']
+                renamed = cli_board('edit', custom_board['id'], '--name=Renamed board',
+                                    '--view-mode=backlog')['board']
+                assert renamed['name'] == 'Renamed board' and renamed['view_mode'] == 'backlog'
+                assert cli_board('delete', custom_board['id'])['deleted']
+                assert len(cli_board('list')) == 1
                 post(base + '/issues/' + child + '/comments', {'text': 'ready for remote query'}, child_record['revision'])
                 def query(expression):
                     result = subprocess.run([args.cli, '--work-dir', str(repo),
@@ -514,7 +535,7 @@ def main():
                     assert not (directory / '.todos/issues.db').exists(), 'local SQLite fallback'
                     config = (directory / '.todos/config.json').read_text()
                     assert token not in config, 'token persisted in config'
-                print('PASS: real backend init/reuse/worktree/attach, show/prefix/children/tree/multiple, board list/show, TDQ fields/hierarchy/comments, ranked log search, list filters/TDQ, info statistics, CLI create/dependency/blocks and dep add/rm/query, files read/link/unlink, deleted listing/write/reason, workflow status/field update/start/unstart/block/unblock/reopen, comments/log/handoff/review/reject/approve auto/all/close, last/undo, no local DB/token')
+                print('PASS: real backend init/reuse/worktree/attach, show/prefix/children/tree/multiple, board CRUD/positions, TDQ fields/hierarchy/comments, ranked log search, list filters/TDQ, info statistics, CLI create/dependency/blocks and dep add/rm/query, files read/link/unlink, deleted listing/write/reason, workflow status/field update/start/unstart/block/unblock/reopen, comments/log/handoff/review/reject/approve auto/all/close, last/undo, no local DB/token')
             finally:
                 server.terminate()
                 try:

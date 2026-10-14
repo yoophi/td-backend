@@ -1,8 +1,9 @@
 # 구현 진행 기록
 
-CLI `board list/show`는 서버 Board API에 연결했습니다. builtin Board와 카드가
-local DB 없이 동일 프로젝트·Session 범위에서 표시되며, 실제 서버 스모크에서
-명령의 JSON 출력과 Issue 집합을 검증했습니다. 변경 명령은 후속 작업입니다.
+CLI `board list/show/create/edit/delete/move/unposition`을 서버 Board API에
+연결했습니다. builtin Board와 카드, 보드 정의 변경 및 Issue 위치를 local DB
+없이 같은 프로젝트·Session 범위에서 처리합니다. 변경은 관측 revision과
+durable intent를 사용하며 실제 서버 스모크로 명령 결과를 검증했습니다.
 
 완료 여부와 의존 관계는 td의 GitHub-backed task 상태를 기준으로 합니다. 전체 목표는 등록된 backend·CLI·monitor/serve·GUI 연동 task 전부를 구현하고 검증하는 것입니다.
 
