@@ -38,7 +38,7 @@ func TestClaimReleaseRechecksHolderLineageLivenessAndReplays(t *testing.T) {
 	}
 	id := createAndStart("Release exact claim")
 	path := base + "/issues/" + id + "/release"
-	staleBody := fmt.Sprintf(`{"holder":%q,"mode":"stale","stale_seconds":1}`, holder)
+	staleBody := fmt.Sprintf(`{"holder":%q,"mode":"stale","stale_nanos":1000000000}`, holder)
 	status, _, data := issueRequest(t, h, "POST", path, lineage, key(t), `"r-2"`, staleBody)
 	if status != 409 {
 		t.Fatalf("lineage stale release status=%d, body=%s", status, data)

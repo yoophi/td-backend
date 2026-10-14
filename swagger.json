@@ -9163,7 +9163,7 @@
               "stale"
             ]
           },
-          "stale_seconds": {
+          "stale_nanos": {
             "type": "integer",
             "minimum": 1
           },
@@ -9172,7 +9172,7 @@
           }
         },
         "additionalProperties": false,
-        "description": "Exact session release ignores liveness. Stale release requires positive stale_seconds, excludes caller lineage, and checks holder, issue revision, session/issue/activity timestamps again in the write transaction.",
+        "description": "Exact session release ignores liveness. Stale release requires positive duration in nanoseconds, excludes caller lineage, and checks holder, issue revision, session/issue/activity timestamps again in the write transaction.",
         "required": [
           "holder",
           "mode"

@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"math"
 	"strings"
 	"time"
 
@@ -18,10 +17,10 @@ import (
 // ReleaseCommand lets a supervisor release another Session's claim. The
 // selector is checked again inside the write transaction, after If-Match.
 type ReleaseCommand struct {
-	Holder       string `json:"holder"`
-	Mode         string `json:"mode"` // session or stale
-	StaleSeconds int64  `json:"stale_seconds,omitempty"`
-	Reason       string `json:"reason,omitempty"`
+	Holder     string `json:"holder"`
+	Mode       string `json:"mode"` // session or stale
+	StaleNanos int64  `json:"stale_nanos,omitempty"`
+	Reason     string `json:"reason,omitempty"`
 }
 
 type ReleaseResult struct {
@@ -35,8 +34,8 @@ func (s *Service) ReleaseClaim(ctx context.Context, c domain.Caller, m port.Muta
 	if cmd.Mode != "session" && cmd.Mode != "stale" {
 		return port.StoredReply{}, invalid("mode", "expected session or stale")
 	}
-	if cmd.Mode == "stale" && (cmd.StaleSeconds <= 0 || cmd.StaleSeconds > math.MaxInt64/int64(time.Second)) || cmd.Mode == "session" && cmd.StaleSeconds != 0 {
-		return port.StoredReply{}, invalid("stale_seconds", "positive threshold required only for stale mode")
+	if cmd.Mode == "stale" && cmd.StaleNanos <= 0 || cmd.Mode == "session" && cmd.StaleNanos != 0 {
+		return port.StoredReply{}, invalid("stale_nanos", "positive threshold required only for stale mode")
 	}
 	cmd.Reason = strings.TrimSpace(cmd.Reason)
 	return s.Runner.Run(ctx, c, m, "workflow.release", func(command operation.CommandContext) (any, error) {
@@ -61,7 +60,7 @@ func (s *Service) ReleaseClaim(ctx context.Context, c domain.Caller, m port.Muta
 		}
 		message := fmt.Sprintf("claim released: session %s (released by %s)", cmd.Holder, c.SessionID)
 		if cmd.Mode == "stale" {
-			message = fmt.Sprintf("claim released: implementer session %s idle longer than %s", cmd.Holder, time.Duration(cmd.StaleSeconds)*time.Second)
+			message = fmt.Sprintf("claim released: implementer session %s idle longer than %s", cmd.Holder, time.Duration(cmd.StaleNanos))
 		}
 		if cmd.Reason != "" {
 			message += "; " + cmd.Reason
@@ -145,7 +144,7 @@ func verifyStaleClaim(command operation.CommandContext, c domain.Caller, issue d
 			last = row.CreatedAt
 		}
 	}
-	if last.IsZero() || command.Now.Sub(last) <= time.Duration(cmd.StaleSeconds)*time.Second {
+	if last.IsZero() || command.Now.Sub(last) <= time.Duration(cmd.StaleNanos) {
 		return domain.ErrConflict
 	}
 	return nil
