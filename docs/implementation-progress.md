@@ -2,6 +2,15 @@
 
 ## gh-16 완료 및 gh-17 Monitor 진행
 
+Monitor의 Note 모달에 backend 목록·상세·생성·수정·pin/archive·삭제·복원을
+연결했습니다. 표시한 Note의 revision을 보관하고, 변경 전에 다시 관측하며,
+durable intent로 불확실한 응답의 재시도 payload를 유지합니다. Issue의 review·reopen,
+approve·close·record-review와 삭제도 서버 workflow 및 관측 revision을
+사용합니다. Form 생성은 초기 dependency를 같은 POST에 포함합니다. 이 작업은
+CLI 커밋 `0c26f8e`, `05ed98a`, `4cbe681`, `b00093a`, `1c8680a`로 각각
+push했습니다. 복합 Form 편집과 review plan의 구현 이력 판단, handoff 모달,
+Board query preview/autofill 및 실제 TUI/embedded 통합 검증은 남아 있습니다.
+
 gh-16의 명시 완료 기준을 실제 Go/SQLite 서버와 CLI 통합 스모크로 재검증하고
 검토·종료했습니다. 복합 `update` 플래그 및 `unstart --session/--stale` 확장은
 별도 gh-20으로 추적합니다.
