@@ -6,13 +6,13 @@
 
 ## 서버 실행
 
-현재 Homebrew 릴리스는 SQLite 서버입니다. 릴리스 버전은 `YYYY.M.PATCH` 형식의 CalVer를 따릅니다(예: `2026.10.0`). PostgreSQL 엔진은 [PR #24](https://github.com/yoophi/td-backend/pull/24)에 있으며, 이를 사용하려면 해당 브랜치를 소스에서 빌드하세요.
+Homebrew 릴리스 버전은 `YYYY.M.PATCH` 형식의 CalVer를 따릅니다(예: `2026.10.1`). `2026.10.1`부터 SQLite와 PostgreSQL 엔진을 모두 사용할 수 있습니다.
 
 ```sh
-# Homebrew 설치(SQLite)
+# Homebrew 설치
 brew install yoophi/tap/td-backend
 
-# 또는 현재 checkout의 소스 빌드(SQLite/PostgreSQL)
+# 또는 현재 checkout의 소스 빌드
 make build
 # 이후 예시의 td-backend 명령을 ./bin/td-backend로 바꿔 실행
 ```
@@ -26,7 +26,7 @@ td-backend --addr 127.0.0.1:7000 --db ./data/td-backend.db
 
 SQLite가 기본 엔진이므로 `--db-engine=sqlite`는 생략할 수 있습니다. 상대 DB 경로는 서버를 실행한 디렉터리를 기준으로 해석됩니다. 지속적으로 사용할 저장 위치에는 절대 경로를 지정하세요. 서버가 실행 중인 다른 터미널에서 `curl --fail http://127.0.0.1:7000/healthz`로 상태를 확인합니다. 서버를 종료하려면 실행 터미널에서 Ctrl-C를 누릅니다.
 
-PostgreSQL 16 이상을 사용하려면 전용 데이터베이스와 대상 schema의 테이블 생성·조회·수정 권한을 가진 계정을 준비합니다. 현재 PR 브랜치를 빌드한 후 다음처럼 실행합니다. 연결 문자열에는 운영 환경에 맞는 TLS 설정을 포함하세요.
+PostgreSQL 16 이상을 사용하려면 전용 데이터베이스와 대상 schema의 테이블 생성·조회·수정 권한을 가진 계정을 준비합니다. Homebrew 설치본은 `td-backend`, 소스 빌드본은 `./bin/td-backend` 명령으로 실행합니다. 연결 문자열에는 운영 환경에 맞는 TLS 설정을 포함하세요.
 
 ```sh
 export TD_BACKEND_BOOTSTRAP_TOKEN='앞에서 생성해 보관한 32자 이상 token'
