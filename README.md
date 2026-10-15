@@ -4,29 +4,42 @@
 
 서버와 td client adapter는 구현되어 있습니다. `td`의 원격 store 변경은 [CLI 브랜치](https://github.com/yoophi/td/tree/feat/td-backend-store)에 있습니다. 검증 범위와 남은 작업은 [통합 검증 기록](docs/integration-report.md)과 [구현 진행 기록](docs/implementation-progress.md)을 확인하세요.
 
-## 사용법
+## 서버 실행
 
-Homebrew를 사용한다면 `yoophi/tap`에서 서버를 설치할 수 있습니다.
-릴리스 버전은 `YYYY.M.PATCH` 형식의 CalVer를 따릅니다(예: `2026.10.0`).
+현재 Homebrew 릴리스는 SQLite 서버입니다. 릴리스 버전은 `YYYY.M.PATCH` 형식의 CalVer를 따릅니다(예: `2026.10.0`). PostgreSQL 엔진은 [PR #24](https://github.com/yoophi/td-backend/pull/24)에 있으며, 이를 사용하려면 해당 브랜치를 소스에서 빌드하세요.
 
 ```sh
+# Homebrew 설치(SQLite)
 brew install yoophi/tap/td-backend
+
+# 또는 현재 checkout의 소스 빌드(SQLite/PostgreSQL)
+make build
+# 이후 예시의 td-backend 명령을 ./bin/td-backend로 바꿔 실행
+```
+
+서버 인증 토큰을 한 번 생성해 안전한 곳에 보관하고, 재시작 때 **같은 값**을 설정합니다. 토큰은 32자 이상이어야 합니다. 아래 SQLite 예시는 현재 디렉터리 아래 `data/td-backend.db`에 저장하고 `127.0.0.1:7000`에서 HTTP를 제공합니다.
+
+```sh
 export TD_BACKEND_BOOTSTRAP_TOKEN="$(openssl rand -hex 32)"
 td-backend --addr 127.0.0.1:7000 --db ./data/td-backend.db
 ```
 
-재시작할 때는 같은 bootstrap token을 사용해야 기존 credential이 유지됩니다. SQLite 파일 경로는 서버 프로세스의 현재 디렉터리를 기준으로 해석하므로, 운영할 때는 `--db`에 지속적으로 사용할 경로를 지정하세요. 설치한 서버의 상태는 `curl http://127.0.0.1:7000/healthz`로 확인할 수 있습니다.
+SQLite가 기본 엔진이므로 `--db-engine=sqlite`는 생략할 수 있습니다. 상대 DB 경로는 서버를 실행한 디렉터리를 기준으로 해석됩니다. 지속적으로 사용할 저장 위치에는 절대 경로를 지정하세요. 서버가 실행 중인 다른 터미널에서 `curl --fail http://127.0.0.1:7000/healthz`로 상태를 확인합니다. 서버를 종료하려면 실행 터미널에서 Ctrl-C를 누릅니다.
 
-PostgreSQL 16 이상을 사용하려면 전용 데이터베이스와 schema를 만들고, 해당 schema에 테이블 생성·조회·수정 권한이 있는 계정을 사용합니다. 연결 문자열에는 운영 환경에 맞는 TLS 설정을 포함하세요.
+PostgreSQL 16 이상을 사용하려면 전용 데이터베이스와 대상 schema의 테이블 생성·조회·수정 권한을 가진 계정을 준비합니다. 현재 PR 브랜치를 빌드한 후 다음처럼 실행합니다. 연결 문자열에는 운영 환경에 맞는 TLS 설정을 포함하세요.
 
 ```sh
-export TD_BACKEND_BOOTSTRAP_TOKEN='재시작에도 동일하게 사용할 32자 이상 token'
+export TD_BACKEND_BOOTSTRAP_TOKEN='앞에서 생성해 보관한 32자 이상 token'
 export TD_BACKEND_DB_ENGINE=postgres
 export TD_BACKEND_DATABASE_URL='postgres://td_backend@db.example/td_backend?sslmode=verify-full'
-td-backend --addr 127.0.0.1:7000
+./bin/td-backend --addr 127.0.0.1:7000
 ```
 
 `--db-engine=postgres`도 사용할 수 있으며 기본 엔진은 `sqlite`입니다. PostgreSQL에서는 `--db`, `TD_BACKEND_DB_PATH`, `--readers`, `--busy-timeout`을 함께 지정할 수 없습니다. SQLite에서는 `TD_BACKEND_DATABASE_URL`을 지정할 수 없습니다. 서버 시작 시 선택한 엔진의 migration을 자동 적용하며, 두 서버가 같은 PostgreSQL 데이터베이스를 공유할 수 있습니다. **엔진을 바꾸면 빈 데이터베이스로 시작하며 기존 Project와 데이터는 자동으로 옮겨지지 않습니다.** 데이터 이전은 별도 export/import 절차가 필요합니다. SQLite는 실행 중인 서버를 멈추고 DB/WAL 파일을 일관되게 백업하거나 SQLite backup API를 사용하세요. PostgreSQL은 정기적으로 `pg_dump -Fc -d td_backend -f td_backend.dump`로 백업하고 별도 DB에 `pg_restore`하여 복원 검증을 수행하세요.
+
+## td 연결
+
+서버와 별도의 프로젝트 터미널에서 같은 토큰을 `TD_BACKEND_TOKEN`으로 설정합니다. 같은 터미널에서 서버를 실행했다면 `export TD_BACKEND_TOKEN="$TD_BACKEND_BOOTSTRAP_TOKEN"`을 사용해도 됩니다. 프로젝트 루트에서 다음 명령을 실행합니다.
 
 ```sh
 # 신규 Project 생성: 서버가 ID를 발급하고 td가 저장
@@ -129,16 +142,12 @@ docker run --rm \
 
 ## 명세 재생성 및 검증
 
-Go 서버는 다음 명령으로 빌드·실행·검증합니다. 기본 DB는 `./data/td-backend.db`, listen은 `127.0.0.1:7000`입니다.
+Go 서버의 빌드와 검사는 다음 명령으로 실행합니다. 서버 실행 방법은 위의 [서버 실행](#서버-실행)을 따릅니다.
 
 ```sh
 make build
 make test-race
 make check
-# 최초 한 번 생성해 보관하고, 재시작에서는 동일한 값을 사용
-export TD_BACKEND_BOOTSTRAP_TOKEN="$(openssl rand -hex 32)"
-./bin/td-backend --addr 127.0.0.1:7000 --db ./data/td-backend.db
-curl http://127.0.0.1:7000/healthz
 ```
 
 Bootstrap token은 32자 이상이며 digest만 선택한 DB에 저장합니다. 설정 token을 변경하면 기존 bootstrap credential은 폐기됩니다. `/healthz` 외 API는 bearer token을 요구합니다. Project·Session 등록, Issue CRUD/workflow/review/handoff, 관계·파일·활동, Board, Note, Work Session, Focus, TDQ query, Monitor snapshot, Stats·labels, operation audit·Undo, 변경 token과 refresh/ping SSE를 지원합니다. Session 등록을 제외한 project-scoped 조회는 등록된 `X-TD-Session`도 필요합니다.
