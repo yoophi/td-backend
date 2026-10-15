@@ -6,6 +6,17 @@
 
 ## 사용법
 
+Homebrew를 사용한다면 `yoophi/tap`에서 서버를 설치할 수 있습니다.
+릴리스 버전은 `YYYY.M.PATCH` 형식의 CalVer를 따릅니다(예: `2026.10.0`).
+
+```sh
+brew install yoophi/tap/td-backend
+export TD_BACKEND_BOOTSTRAP_TOKEN="$(openssl rand -hex 32)"
+td-backend --addr 127.0.0.1:7000 --db ./data/td-backend.db
+```
+
+재시작할 때는 같은 bootstrap token을 사용해야 기존 credential이 유지됩니다. SQLite 파일 경로는 서버 프로세스의 현재 디렉터리를 기준으로 해석하므로, 운영할 때는 `--db`에 지속적으로 사용할 경로를 지정하세요. 설치한 서버의 상태는 `curl http://127.0.0.1:7000/healthz`로 확인할 수 있습니다.
+
 ```sh
 # 신규 Project 생성: 서버가 ID를 발급하고 td가 저장
 export TD_BACKEND_TOKEN='서버의 bootstrap token'
