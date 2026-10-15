@@ -87,6 +87,7 @@ Project ID는 생성 후 불변이며 이름·Git remote·경로에서 파생하
 | [api/td-serve.swagger.json](api/td-serve.swagger.json) | 로컬 serve facade와 GUI 호환 HTTP 계약 |
 | [docs/api-design.md](docs/api-design.md) | endpoint, session, 원자성, monitor 및 GUI 연결 |
 | [docs/backend-architecture.md](docs/backend-architecture.md) | Go package, ports/adapters, domain, transaction, 운영·검증 |
+| [docs/postgresql-engine-design.md](docs/postgresql-engine-design.md) | SQLite/PostgreSQL 엔진 선택과 PostgreSQL adapter 구현 설계(미구현) |
 | [docs/sqlite-schema.sql](docs/sqlite-schema.sql) | 실행 검증 가능한 21개 테이블 DDL 초안; production migration 전 단계 |
 | [docs/id-policy.md](docs/id-policy.md) | Project ID와 init/operation key 생성 규칙 |
 | [docs/implementation-plan.md](docs/implementation-plan.md) | td feature/task, dependencies와 완료 기준 |
