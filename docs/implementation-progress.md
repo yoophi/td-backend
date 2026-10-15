@@ -1,5 +1,18 @@
 # 구현 진행 기록
 
+## gh-23 PostgreSQL 엔진 선택 및 adapter
+
+기본 SQLite를 유지하면서 `TD_BACKEND_DB_ENGINE=postgres`와
+`TD_BACKEND_DATABASE_URL`로 PostgreSQL 16 이상을 선택할 수 있습니다. PostgreSQL
+adapter는 기존 application ports와 HTTP 계약을 그대로 구현하며 전용 migration,
+serializable write, repeatable-read snapshot, 변경 감지 SSE를 제공합니다. 동시
+서버 시작 시 migration lock과 bootstrap 재시도를 검증했습니다. PostgreSQL 16의
+임시 DB에서 두 실제 서버 프로세스와 두 store의 receipt/revision/Undo/SSE,
+동시 revision 충돌, migration 변조 거부를 확인했고 td CLI, monitor, serve의
+원격 연결도 실행했습니다. `go test ./...`, 대상 race 검사, `go vet ./...`,
+`make spec`을 통과했습니다. CI는 PostgreSQL 16과 18을 검증하도록 추가했습니다.
+SQLite에서 PostgreSQL로 자동 데이터 이동은 지원하지 않습니다.
+
 ## gh-17·gh-18 완료, gh-20 구현 검증
 
 Monitor의 terminal 및 embedded 경로와 `td serve`의 원격 GUI facade를 실제

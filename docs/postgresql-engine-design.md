@@ -1,6 +1,6 @@
 # SQLite / PostgreSQL 엔진 선택 설계
 
-상태: **설계 제안**. 현재 배포 버전은 SQLite만 구현한다. 이 문서는 기존 HTTP 계약과 `td` client를 바꾸지 않고 서버 저장 엔진을 선택하게 만드는 구현 기준이다. `td init --store=td-backend,<URL>`의 `store`는 원격 서버를 뜻하며, 서버의 데이터베이스 엔진 선택과 별개다.
+상태: **구현됨(릴리스 전)**. 이 문서는 기존 HTTP 계약과 `td` client를 바꾸지 않고 서버 저장 엔진을 선택하게 만드는 구현 기준이다. `td init --store=td-backend,<URL>`의 `store`는 원격 서버를 뜻하며, 서버의 데이터베이스 엔진 선택과 별개다.
 
 ## 목표와 경계
 
@@ -45,13 +45,22 @@ flowchart LR
 
 `internal/application/port`의 현재 `UnitOfWork.Write`, `ReadStore.Snapshot`, repository interface를 공통 seam으로 사용한다. `internal/adapter/postgres`가 이 interface를 직접 구현하고, `cmd/td-backend`만 `config.Engine`에 따라 concrete store를 연다. 조립 시 필요한 `Close`와 진단 정보는 composition root의 작은 private interface로 둔다. application/domain/HTTP에 SQL dialect 분기나 엔진별 DTO를 넣지 않는다. `modernc.org/sqlite`는 SQLite adapter에만, [pgx의 `database/sql` 호환 driver](https://pkg.go.dev/github.com/jackc/pgx/v5/stdlib)는 PostgreSQL adapter에만 둔다.
 
-SQL 파일은 엔진별로 관리한다. 현재 SQLite SQL에는 `?` placeholder, `INSERT OR IGNORE`, `json_object`/`json_extract`/`json_group_array`, `PRAGMA`가 있으므로 문자열 치환으로 재사용하지 않는다. PostgreSQL은 `$1` placeholder, `ON CONFLICT`, `jsonb` 연산과 엔진별 query를 사용한다. domain 값 ↔ DB row mapping 중 실제로 같은 순수 변환만 공통화하고, 두 adapter를 얇은 SQL 변환 계층으로 억지로 합치지 않는다. 신규 `postgres.Store`도 모든 port를 compile-time assertion으로 확인한다.
+SQL 파일은 엔진별로 관리한다. 현재 SQLite SQL에는 `?` placeholder, `INSERT OR IGNORE`, `json_object`/`json_extract`/`json_group_array`, `PRAGMA`가 있으므로 PostgreSQL의 `ON CONFLICT`, JSON 연산과 query를 별도로 작성한다. PostgreSQL adapter 내부의 binder는 정적 SQL의 `?` 인자 표시만 `$1` 형식으로 바꾼다. domain 값 ↔ DB row mapping 중 실제로 같은 순수 변환만 공통화하고, 두 adapter를 얇은 SQL 변환 계층으로 억지로 합치지 않는다. 신규 `postgres.Store`도 모든 port를 compile-time assertion으로 확인한다.
 
 ## Schema와 migration
 
 `internal/adapter/postgres/migrations`에 PostgreSQL 전용 번호·이름·checksum migration을 둔다. 기존 SQLite migration 파일은 수정하지 않는다. PostgreSQL에서도 Project 종속 테이블의 `(project_id, id)` PK/FK, receipt의 `(actor_id, scope_key, operation_id)` 유일성, active review/board position 제약을 유지한다. `schema_migrations`를 별도로 기록하고 이미 적용된 migration의 checksum 불일치나 알 수 없는 상위 버전은 startup 실패로 처리한다.
 
-ID·status·policy 값은 `text`, revision/change counter는 `bigint`, boolean은 `boolean`, 시각은 UTC `timestamptz`로 매핑한다. JSON을 질의하는 payload는 `jsonb`를 사용하되, receipt replay의 **응답 body 원본 바이트**는 `bytea`로 저장한다. adapter가 기존 domain의 UTC 시간과 JSON 표현을 변환하며, `RETURNING`이 필요한 mutation은 PostgreSQL 문법으로 구현한다. 현재 SQLite schema의 CHECK·FK·unique·partial index를 PostgreSQL migration과 대조하는 parity 표를 구현 PR에 포함한다. [PostgreSQL INSERT / ON CONFLICT / RETURNING](https://www.postgresql.org/docs/current/sql-insert.html).
+현재 구현은 기존 row codec과 응답 계약을 유지하기 위해 ID·status·policy·UTC 시각을 `text`, revision/change counter와 0/1 boolean을 `integer`, JSON payload를 제약이 있는 `text`로 저장한다. receipt replay의 **응답 body 원본 바이트**는 `bytea`로 저장한다. native `boolean`/`timestamptz`/`jsonb` 변환은 별도 schema migration과 codec 변경이 필요하며 현재 범위에 포함하지 않는다. [PostgreSQL INSERT / ON CONFLICT](https://www.postgresql.org/docs/current/sql-insert.html).
+
+| 제약 범주 | SQLite | PostgreSQL |
+| --- | --- | --- |
+| Project 소유 데이터 | `(project_id, id)` 복합 키·FK | 동일한 복합 키·FK |
+| receipt 중복 방지 | actor/scope/operation 유일 키 | 동일한 유일 키 |
+| active review·board position | partial unique index | 동일한 partial unique index |
+| enum·points·revision | CHECK 제약 | 동일한 CHECK 제약 |
+| JSON payload | `json_valid(...)` CHECK | `IS JSON` CHECK |
+| 응답 원본 | BLOB | BYTEA |
 
 동시 startup migration은 PostgreSQL transaction-level advisory lock으로 직렬화한다. lock을 획득한 뒤 migration 상태를 다시 읽어 적용하고 commit 때 lock을 해제한다. 일반 요청에는 이 전역 migration lock을 사용하지 않는다. migration 실패 또는 DB 접속 실패 시 HTTP listen 전에 종료한다. [PostgreSQL advisory lock 문서](https://www.postgresql.org/docs/current/functions-admin.html#FUNCTIONS-ADVISORY-LOCKS).
 
@@ -61,7 +70,7 @@ ID·status·policy 값은 `text`, revision/change counter는 `bigint`, boolean�
 
 기존 callback 계약처럼 transaction 안에서 network I/O와 중첩 transaction을 금지한다. `40001`(serialization failure), `40P01`(deadlock), lock timeout/연결 장애는 `domain.ErrUnavailable`로 분류하고 **서버가 callback을 자동 재실행하지 않는다**. client는 같은 `Idempotency-Key`와 같은 요청으로 재시도한다. 성공했지만 응답이 유실된 경우 receipt 조회로 동일한 response bytes를 돌려준다. 이미 commit된 business revision 충돌은 기존 409 계약을 유지한다. DB unique/FK 오류는 constraint별로 기존 domain conflict/validation에 매핑하고 SQL 오류 문구를 응답에 노출하지 않는다. [PostgreSQL SQLSTATE](https://www.postgresql.org/docs/current/errcodes-appendix.html).
 
-Project 생성과 bootstrap도 같은 transaction 안에서 actor/membership/builtin board/receipt를 저장한다. 동일 key의 동시 생성은 unique constraint와 retry/replay로 해결한다. 서버 인스턴스들이 하나의 PostgreSQL DB를 공유한다면 같은 bootstrap token을 사용해야 하며, migration과 token 초기화의 동시 시작을 검증한다. SSE는 기존 change token poll을 사용하므로 다른 프로세스에서 commit한 변경도 다음 poll에 감지할 수 있어야 한다.
+Project 생성과 bootstrap도 같은 transaction 안에서 actor/membership/builtin board/receipt를 저장한다. 동일 key의 동시 생성은 unique constraint와 client retry/replay로 해결한다. 서버 인스턴스들이 하나의 PostgreSQL DB를 공유한다면 같은 bootstrap token을 사용해야 한다. 동시 시작 시 bootstrap transaction의 serialization failure만 서버 시작 단계에서 제한된 횟수로 재시도한다. 일반 요청의 callback은 자동 재실행하지 않는다. SSE는 기존 change token poll을 사용하므로 다른 프로세스에서 commit한 변경도 다음 poll에 감지할 수 있어야 한다.
 
 ## 구현 순서와 완료 기준
 

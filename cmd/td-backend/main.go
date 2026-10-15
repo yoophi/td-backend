@@ -4,9 +4,19 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"log/slog"
+	"net"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
 	"github.com/yoophi/td-backend/internal/adapter/httpapi"
 	"github.com/yoophi/td-backend/internal/adapter/httpapi/receiptcodec"
 	"github.com/yoophi/td-backend/internal/adapter/identity"
+	"github.com/yoophi/td-backend/internal/adapter/postgres"
 	"github.com/yoophi/td-backend/internal/adapter/sqlite"
 	"github.com/yoophi/td-backend/internal/adapter/tokenauth"
 	"github.com/yoophi/td-backend/internal/application/board"
@@ -16,19 +26,21 @@ import (
 	"github.com/yoophi/td-backend/internal/application/monitor"
 	"github.com/yoophi/td-backend/internal/application/note"
 	"github.com/yoophi/td-backend/internal/application/operation"
+	"github.com/yoophi/td-backend/internal/application/port"
 	"github.com/yoophi/td-backend/internal/application/project"
 	"github.com/yoophi/td-backend/internal/application/undo"
 	"github.com/yoophi/td-backend/internal/application/workflow"
 	"github.com/yoophi/td-backend/internal/application/worksession"
 	"github.com/yoophi/td-backend/internal/config"
-	"log/slog"
-	"net"
-	"net/http"
-	"os"
-	"os/signal"
-	"syscall"
-	"time"
+	"github.com/yoophi/td-backend/internal/domain"
 )
+
+type backendStore interface {
+	port.UnitOfWork
+	port.ReadStore
+	io.Closer
+	Version() string
+}
 
 func run(ctx context.Context, args []string) error {
 	cfg, err := config.Load(args, os.Getenv)
@@ -38,13 +50,19 @@ func run(ctx context.Context, args []string) error {
 	if len(cfg.BootstrapToken) < 32 {
 		return fmt.Errorf("TD_BACKEND_BOOTSTRAP_TOKEN must contain at least 32 characters")
 	}
-	store, err := sqlite.Open(ctx, cfg.DBPath, sqlite.Options{Readers: cfg.Readers, BusyTimeout: cfg.BusyTimeout})
+	var store backendStore
+	switch cfg.Engine {
+	case config.EngineSQLite:
+		store, err = sqlite.Open(ctx, cfg.DBPath, sqlite.Options{Readers: cfg.Readers, BusyTimeout: cfg.BusyTimeout})
+	case config.EnginePostgres:
+		store, err = postgres.Open(ctx, cfg.DatabaseURL)
+	}
 	if err != nil {
 		return err
 	}
 	defer store.Close()
 	auth := tokenauth.New(store, store)
-	if err = auth.Bootstrap(ctx, cfg.BootstrapToken); err != nil {
+	if err = bootstrap(ctx, auth, cfg); err != nil {
 		return err
 	}
 	ids := identity.New()
@@ -74,7 +92,7 @@ func run(ctx context.Context, args []string) error {
 		IdleTimeout: time.Minute, BaseContext: func(net.Listener) context.Context { return ctx },
 	}
 	// WriteTimeout stays zero; SSE applies a bounded deadline to each write.
-	slog.Info("td-backend listening", "address", listener.Addr().String(), "sqlite", store.Version())
+	slog.Info("td-backend listening", "address", listener.Addr().String(), "db_engine", cfg.Engine, "db_version", store.Version())
 	done := make(chan error, 1)
 	go func() { done <- server.Serve(listener) }()
 	select {
@@ -97,6 +115,21 @@ func run(ctx context.Context, args []string) error {
 		return err
 	}
 }
+
+func bootstrap(ctx context.Context, auth *tokenauth.Auth, cfg config.Config) error {
+	for attempt := 0; ; attempt++ {
+		err := auth.Bootstrap(ctx, cfg.BootstrapToken)
+		if err == nil || cfg.Engine != config.EnginePostgres || !errors.Is(err, domain.ErrUnavailable) || attempt >= 4 {
+			return err
+		}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(time.Duration(attempt+1) * 50 * time.Millisecond):
+		}
+	}
+}
+
 func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
